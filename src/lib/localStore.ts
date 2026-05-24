@@ -572,6 +572,7 @@ export const localDb = {
   taskHandovers: {
     getAll: () => getAll<TaskHandover>("taskHandovers"),
     insert: (t: Partial<TaskHandover>) => insertItem<TaskHandover>("taskHandovers", { created_at: now(), ...t } as TaskHandover),
+    update: (id: string, u: Partial<TaskHandover>) => updateItem<TaskHandover>("taskHandovers", id, u),
   },
   taskComments: {
     getAll: () => getAll<TaskComment>("taskComments"),
