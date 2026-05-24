@@ -18,7 +18,7 @@ export const useUserRole = () => {
   const isPrepUnitHead = roles.includes("prep_unit_head");
   const isCurriculumIndividual = roles.includes("curriculum_individual");
   const isPrepIndividual = roles.includes("prep_individual");
-  const isIndividual = !isAdmin && !isDeptManager && !isUnitHead && !isCurriculumIndividual && !isPrepIndividual;
+  const isIndividual = !isAdmin && !isDeptManager && !isUnitHead;
   const isManager = isAdmin || isDeptManager;
 
   let persona: UserPersona = "individual";

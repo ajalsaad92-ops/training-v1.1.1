@@ -115,6 +115,12 @@ const Tasks = () => {
   const { persona, isManager, isAdmin, isUnitHead, isIndividual, section, userId, userName, canEditTasks, has } = useUserRole();
 
   const ename = (id: string | null) => id ? (employees.find(e => e.id === id)?.name || id) : "—";
+  const sectionToUnit = (sec: string) => {
+    if (sec.includes("ناهج") || sec.includes("مناهج")) return "المناهج";
+    if (sec.includes("داد") || sec.includes("تدريب") || sec.includes("عداد")) return "الإعداد";
+    return sec;
+  };
+  const myUnit = sectionToUnit(section);
   const [showCreate, setShowCreate] = useState(false);
   const [showHandover, setShowHandover] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState<string | null>(null);
@@ -156,8 +162,8 @@ const Tasks = () => {
 
   const baseVisibleTasks = tasks.filter(t => {
     if (isManager || isAdmin) return true;
-    if (isUnitHead) return t.unit === section || t.assigned_to === userId || has("view_other_units_tasks");
-    if (isIndividual) return t.unit === section || t.assigned_to === userId;
+    if (isUnitHead) return t.unit === myUnit || t.assigned_to === userId || has("view_other_units_tasks");
+    if (isIndividual) return t.unit === myUnit || t.assigned_to === userId;
     return true;
   });
 
@@ -188,7 +194,7 @@ const Tasks = () => {
   const canEditTask = (task: typeof tasks[0]) => {
     if (isManager || isAdmin) return true;
     if (task.assigned_to === userId && task.status !== "handed_over") return has("edit_task");
-    if (task.unit === section && canEditTasks) return true;
+    if (task.unit === myUnit && canEditTasks) return true;
     return false;
   };
 
@@ -198,11 +204,11 @@ const Tasks = () => {
       return;
     }
     setSaving(true);
-    const targetUnit = (isManager || isAdmin) ? form.unit : (form.unit || section);
-    const isProposalToOtherUnit = !isManager && !isAdmin && isUnitHead && targetUnit && targetUnit !== section;
+    const targetUnit = (isManager || isAdmin) ? form.unit : (form.unit || myUnit);
+    const isProposalToOtherUnit = !isManager && !isAdmin && isUnitHead && targetUnit && targetUnit !== myUnit;
     const payload: Record<string, unknown> = {
       title: form.title,
-      description: form.description + (isProposalToOtherUnit ? `\n\n[مقترح من شعبة ${section}]` : ""),
+      description: form.description + (isProposalToOtherUnit ? `\n\n[مقترح من شعبة ${myUnit}]` : ""),
       unit: targetUnit,
       stage: form.is_routine ? "routine" : form.stage,
       status: isProposalToOtherUnit ? "proposed" : "pending",
@@ -218,7 +224,7 @@ const Tasks = () => {
     if (isProposalToOtherUnit) {
       const deptManagers = localDb.profiles.getAll().filter((p: any) => p.roles?.includes("dept_manager"));
       deptManagers.forEach((mgr: any) => {
-        localDb.notifications.insert({ user_id: mgr.id, message: `مقترح مهمة جديدة من ${section} → ${targetUnit}: ${form.title}`, type: "info", link: "/tasks" });
+        localDb.notifications.insert({ user_id: mgr.id, message: `مقترح مهمة جديدة من ${myUnit} → ${targetUnit}: ${form.title}`, type: "info", link: "/tasks" });
       });
     } else if (form.assigned_to) {
       localDb.notifications.insert({ user_id: form.assigned_to, message: `مهمة جديدة: ${form.title}`, type: "info", link: "/tasks" });
@@ -269,7 +275,7 @@ const Tasks = () => {
       await logAction(userName, "قبول استلام مهمة", task?.title || "");
       toast({ title: "تم", description: "تم قبول المهمة وبانتظار موافقة رئيس الشعبة" });
       
-      const unitHeads = employees.filter(e => (e.roles?.includes("unit_head") || e.roles?.includes("curriculum_unit_head") || e.roles?.includes("prep_unit_head")) && e.section === task?.unit);
+      const unitHeads = employees.filter(e => (e.roles?.includes("unit_head") || e.roles?.includes("curriculum_unit_head") || e.roles?.includes("prep_unit_head")) && sectionToUnit(e.section) === task?.unit);
       unitHeads.forEach(head => {
         localDb.notifications.insert({ user_id: head.id, message: `موافقة مطلوبة على إحالة مهمة: ${task?.title || ""}`, type: "info", link: `/tasks?focus=${task?.id}` });
       });
@@ -342,7 +348,7 @@ const Tasks = () => {
       localDb.notifications.insert({ user_id: targetId, message: `مهمة مكتملة بانتظار المراجعة: ${task?.title || ""}`, type: "info", link: `/tasks?focus=${taskId}` });
     } else {
       const profiles = localDb.profiles.getAll();
-      const unitHead = profiles.find((p: any) => (p.roles?.includes("unit_head") || p.roles?.includes("curriculum_unit_head") || p.roles?.includes("prep_unit_head")) && p.section === task?.unit);
+      const unitHead = profiles.find((p: any) => (p.roles?.includes("unit_head") || p.roles?.includes("curriculum_unit_head") || p.roles?.includes("prep_unit_head")) && sectionToUnit(p.section) === task?.unit);
       localDb.notifications.insert({ user_id: unitHead?.id || null, message: `مهمة مكتملة بانتظار المراجعة: ${task?.title || ""}`, type: "info", link: `/tasks?focus=${taskId}` });
     }
     refetch();
@@ -842,7 +848,7 @@ const Tasks = () => {
               <div>
                 <Label>الشعبة {(!isManager && !isAdmin) && <span className="text-[10px] text-muted-foreground">(اختيار شعبة غير شعبتك يجعل المهمة مقترحاً لرئيس القسم)</span>}</Label>
                 <Select value={form.unit} onValueChange={v => setForm({ ...form, unit: v })}>
-                  <SelectTrigger><SelectValue placeholder={section ? `شعبتك: ${section}` : "اختر الشعبة"} /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={myUnit ? `شعبتك: ${myUnit}` : "اختر الشعبة"} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="الإعداد">شعبة الإعداد</SelectItem>
                     <SelectItem value="المناهج">شعبة المناهج</SelectItem>
@@ -871,7 +877,7 @@ const Tasks = () => {
                 <SelectTrigger><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
                 <SelectContent>
                   {employees
-                    .filter(e => (isManager || isAdmin) || e.section === section)
+                    .filter(e => (isManager || isAdmin) || e.section === section || sectionToUnit(e.section) === myUnit)
                     .map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -1014,7 +1020,7 @@ const Tasks = () => {
                             </div>
                           )}
                           
-                          {h.status === "pending_approval" && (isUnitHead || isManager || isAdmin) && selectedTask.unit === section && (
+                          {h.status === "pending_approval" && (isUnitHead || isManager || isAdmin) && selectedTask.unit === myUnit && (
                             <div className="flex gap-1">
                               <Button size="sm" onClick={() => handleApproveHandover(h.id, true)} className="h-6 text-[10px] px-2 bg-success text-success-foreground hover:bg-success/90">اعتماد الإحالة</Button>
                               <Button size="sm" onClick={() => handleApproveHandover(h.id, false)} variant="destructive" className="h-6 text-[10px] px-2">رفض الإحالة</Button>
