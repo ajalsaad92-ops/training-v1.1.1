@@ -17,7 +17,7 @@ import {
   Settings as SettingsIcon, Download, Upload, Shield, Database, FileSpreadsheet,
   AlertTriangle, CheckCircle2, XCircle, Clock, Loader2, LogOut, Bug, Share2,
   Palette, Users, UserPlus, RefreshCw, Lock, Search, ChevronDown, ChevronUp,
-  Eye, RotateCcw, Copy,
+  Eye, EyeOff, RotateCcw, Copy, Pencil, Trash2,
 } from "lucide-react";
 
 type SettingsTab = "general" | "users" | "permissions" | "designs" | "tools";
