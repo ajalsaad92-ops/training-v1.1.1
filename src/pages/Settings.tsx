@@ -1,0 +1,609 @@
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
+import { localDb, type UserProfile } from "@/lib/localStore";
+import {
+  PERMISSION_CATEGORIES, ALL_PERMISSIONS, ROLE_PERMISSIONS,
+  getPermissionsForRoles, getPermissionDef,
+} from "@/lib/permissions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
+import {
+  Settings as SettingsIcon, Download, Upload, Shield, Database, FileSpreadsheet,
+  AlertTriangle, CheckCircle2, XCircle, Clock, Loader2, LogOut, Bug, Share2,
+  Palette, Users, UserPlus, RefreshCw, Lock, Search, ChevronDown, ChevronUp,
+  Eye, RotateCcw, Copy,
+} from "lucide-react";
+
+type SettingsTab = "general" | "users" | "permissions" | "designs" | "tools";
+
+const Settings = () => {
+  const { user, logout } = useAuth();
+  const { has } = useUserRole();
+  const [activeTab, setActiveTab] = useState<SettingsTab>("general");
+  const [backupDone, setBackupDone] = useState(false);
+
+  const canManageUsers = has("view_users") || has("add_user");
+  const canManagePerms = has("manage_permissions");
+
+  const tabs: { id: SettingsTab; label: string; icon: React.ElementType; show: boolean }[] = [
+    { id: "general", label: "عام", icon: Database, show: true },
+    { id: "users", label: "المستخدمين", icon: Users, show: canManageUsers },
+    { id: "permissions", label: "الصلاحيات", icon: Shield, show: canManagePerms },
+    { id: "designs", label: "التصاميم", icon: Palette, show: true },
+    { id: "tools", label: "أدوات", icon: Bug, show: true },
+  ];
+
+  const handleBackup = () => {
+    const allData = {
+      employees: localDb.employees.getAll(),
+      courses: localDb.courses.getAll(),
+      hrRequests: localDb.hrRequests.getAll(),
+      curriculumItems: localDb.curriculumItems.getAll(),
+      correspondence: localDb.correspondence.getAll(),
+      tasks: localDb.tasks.getAll(),
+      profiles: localDb.profiles.getAll(),
+      exportDate: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tms-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setBackupDone(true);
+    setTimeout(() => setBackupDone(false), 3000);
+  };
+
+  const handleResetData = () => {
+    localStorage.removeItem("tms_local_store");
+    localStorage.removeItem("tms_custom_permissions");
+    toast({ title: "تم إعادة التعيين" });
+    setTimeout(() => window.location.reload(), 500);
+  };
+
+  const visibleTabs = tabs.filter(t => t.show);
+
+  return (
+    <div className="h-full flex flex-col p-2 md:p-3 overflow-hidden">
+      <div className="shrink-0 mb-3">
+        <h1 className="text-base font-bold text-foreground flex items-center gap-2">
+          <SettingsIcon className="w-5 h-5 text-primary" />الإعدادات
+        </h1>
+      </div>
+
+      <div className="flex gap-1 mb-3 shrink-0 overflow-x-auto no-scrollbar">
+        {visibleTabs.map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 whitespace-nowrap ${
+              activeTab === tab.id ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}>
+            <tab.icon className="w-3.5 h-3.5" />{tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto min-h-0 animate-fade-in" key={activeTab}>
+        {activeTab === "general" && (
+          <GeneralTab backupDone={backupDone} onBackup={handleBackup} onReset={handleResetData} />
+        )}
+        {activeTab === "users" && <UsersTab />}
+        {activeTab === "permissions" && <PermissionsTab />}
+        {activeTab === "designs" && <DesignsTab />}
+        {activeTab === "tools" && <ToolsTab logout={logout} userName={user?.name || ""} />}
+      </div>
+    </div>
+  );
+};
+
+function useAuditLogLazy() {
+  const [data, setData] = useState(() => localDb.auditLog.getAll().sort((a, b) => b.timestamp.localeCompare(a.timestamp)));
+  return { data, refetch: () => setData(localDb.auditLog.getAll().sort((a, b) => b.timestamp.localeCompare(a.timestamp))) };
+}
+
+// ===== GENERAL TAB =====
+const GeneralTab = ({ backupDone, onBackup, onReset }: { backupDone: boolean; onBackup: () => void; onReset: () => void }) => {
+  const { data: auditLog } = useAuditLogLazy();
+  const { has } = useUserRole();
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {has("backup_data") && (
+          <div className="bg-card rounded-lg border border-border p-4">
+            <h3 className="font-bold text-sm text-foreground mb-2 flex items-center gap-2"><Database className="w-4 h-4 text-primary" />النسخ الاحتياطي</h3>
+            <p className="text-xs text-muted-foreground mb-3">تحميل نسخة احتياطية من جميع البيانات</p>
+            <Button onClick={onBackup} size="sm" className="gap-1.5"><Download className="w-3.5 h-3.5" />{backupDone ? "✓ تم" : "تحميل"}</Button>
+          </div>
+        )}
+        <div className="bg-card rounded-lg border border-border p-4">
+          <h3 className="font-bold text-sm text-foreground mb-2 flex items-center gap-2"><FileSpreadsheet className="w-4 h-4 text-accent" />استيراد</h3>
+          <p className="text-xs text-muted-foreground mb-3">محاكاة استيراد بيانات من Excel</p>
+          <Button variant="outline" size="sm" className="gap-1.5"><Upload className="w-3.5 h-3.5" />محاكاة</Button>
+        </div>
+      </div>
+
+      {has("reset_data") && (
+        <div className="bg-card rounded-lg border border-border p-4">
+          <h3 className="font-bold text-sm text-foreground mb-2 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-warning" />إعادة تعيين البيانات</h3>
+          <p className="text-xs text-muted-foreground mb-3">حذف جميع البيانات والعودة للبيانات الافتراضية</p>
+          <Button variant="destructive" size="sm" onClick={onReset} className="gap-1.5"><AlertTriangle className="w-3.5 h-3.5" />إعادة تعيين</Button>
+        </div>
+      )}
+
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <div className="p-3 border-b border-border"><h3 className="font-bold text-sm text-foreground flex items-center gap-2"><Shield className="w-4 h-4 text-primary" />سجل المراجعة</h3></div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs text-right">
+            <thead className="bg-muted/50"><tr><th className="p-2">المستخدم</th><th className="p-2">الإجراء</th><th className="p-2">العنصر</th><th className="p-2">الوقت</th></tr></thead>
+            <tbody>
+              {auditLog.length > 0 ? auditLog.slice(0, 20).map(e => (
+                <tr key={e.id} className="border-t border-border/50"><td className="p-2 font-medium">{e.user_name}</td><td className="p-2"><span className="badge-info">{e.action}</span></td><td className="p-2 text-muted-foreground">{e.target}</td><td className="p-2 text-muted-foreground">{new Date(e.timestamp).toLocaleString("ar-SA")}</td></tr>
+              )) : <tr><td colSpan={4} className="text-center py-6 text-muted-foreground">لا توجد سجلات</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ===== USERS TAB =====
+const UsersTab = () => {
+  const [users, setUsers] = useState<Array<UserProfile & { email?: string }>>([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ email: "", password: "", name: "", section: "شعبة الإعداد والتدريب", position: "موظف", phone: "" });
+  const [saving, setSaving] = useState(false);
+  const { has, isAdmin } = useUserRole();
+  const { impersonate } = useAuth();
+
+  const refresh = useCallback(() => {
+    const profiles = localDb.profiles.getAll();
+    const accounts = localDb.userAccounts.getAll();
+    setUsers(profiles.map(p => ({ ...p, email: accounts.find(a => a.profile.id === p.id)?.email || "" })));
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const handleAdd = () => {
+    if (!form.email || !form.password || !form.name) { toast({ title: "نقص بيانات", variant: "destructive" }); return; }
+    setSaving(true);
+    const id = `emp-${Date.now()}`;
+    let roles = ["individual"];
+    if (form.position === "مدير النظام (Admin)") roles = ["admin"];
+    else if (form.position === "مدير القسم") roles = ["dept_manager"];
+    else if (form.position === "مسؤول شعبة") roles = ["unit_head"];
+    
+    const profile = { id, name: form.name, department: "قسم التدريب", section: form.section, position: form.position, phone: form.phone, roles, active: true };
+    localDb.employees.insert({ id, name: form.name, department: "قسم التدريب", section: form.section, position: form.position, phone: form.phone, work_schedule: "daily" as const });
+    localDb.profiles.insert(profile);
+    localDb.userAccounts.insert({ email: form.email, password: form.password, profile });
+    toast({ title: "تم", description: "تم إنشاء المستخدم" });
+    setShowAdd(false);
+    setForm({ email: "", password: "", name: "", section: "شعبة الإعداد والتدريب", position: "موظف", phone: "" });
+    refresh();
+    setSaving(false);
+  };
+
+  const handleDelete = (id: string) => {
+    localDb.profiles.update(id, { active: false });
+    refresh();
+    toast({ title: "تم تعطيل الحساب" });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold text-sm text-foreground flex items-center gap-2"><Users className="w-4 h-4 text-primary" />المستخدمين</h3>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={refresh}><RefreshCw className="w-3.5 h-3.5" /></Button>
+          {has("add_user") && <Button size="sm" onClick={() => setShowAdd(true)} className="gap-1"><UserPlus className="w-3.5 h-3.5" />جديد</Button>}
+        </div>
+      </div>
+
+      <div className="bg-card rounded-lg border border-border overflow-x-auto">
+        <table className="w-full text-xs text-right">
+          <thead className="bg-muted/50"><tr><th className="p-2">الاسم</th><th className="p-2">البريد</th><th className="p-2">القسم</th><th className="p-2">الأدوار</th>{has("delete_user") && <th className="p-2"></th>}</tr></thead>
+          <tbody>
+            {users.filter(u => u.active !== false).map(u => (
+              <tr key={u.id} className="border-t border-border/50 hover:bg-muted/20">
+                <td className="p-2 font-medium">{u.name}</td>
+                <td className="p-2 text-muted-foreground" dir="ltr">{u.email || "—"}</td>
+                <td className="p-2 text-muted-foreground">{u.section || u.department}</td>
+                <td className="p-2"><div className="flex gap-0.5 flex-wrap">{u.roles.map(r => <span key={r} className="px-1 py-0.5 rounded bg-primary/10 text-primary text-[10px]">{r}</span>)}</div></td>
+                {has("delete_user") && <td className="p-2 flex gap-1 justify-end">
+                  {isAdmin && u.id !== localDb.profiles.getById(localStorage.getItem("tms_current_user_id") || "")?.id && (
+                    <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => impersonate(u.id)}>دخول كـ</Button>
+                  )}
+                  <Button variant="ghost" size="sm" className="h-6 text-[10px] text-destructive" onClick={() => handleDelete(u.id)}>تعطيل</Button>
+                </td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>إضافة موظف جديد</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>الاسم *</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+            <div><Label>البريد *</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} dir="ltr" /></div>
+            <div><Label>كلمة المرور *</Label><Input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} dir="ltr" /></div>
+            <Select value={form.section} onValueChange={v => setForm({ ...form, section: v })}>
+              <SelectTrigger><SelectValue placeholder="الشعبة" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="شعبة الإعداد والتدريب">شعبة الإعداد والتدريب</SelectItem>
+                <SelectItem value="شعبة المناهج">شعبة المناهج</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={form.position} onValueChange={v => setForm({ ...form, position: v })}>
+              <SelectTrigger><SelectValue placeholder="المنصب" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="مدير النظام (Admin)">مدير النظام (Admin)</SelectItem>
+                <SelectItem value="مدير القسم">مدير القسم</SelectItem>
+                <SelectItem value="مسؤول شعبة">مسؤول شعبة</SelectItem>
+                <SelectItem value="موظف">موظف</SelectItem>
+              </SelectContent>
+            </Select>
+            <div><Label>الهاتف</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} dir="ltr" /></div>
+          </div>
+          <DialogFooter><Button onClick={handleAdd} disabled={saving} size="sm">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ"}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// ===== PERMISSIONS TAB (NEW COMPREHENSIVE DESIGN) =====
+const PermissionsTab = () => {
+  const [profiles, setProfiles] = useState<UserProfile[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [customPerms, setCustomPerms] = useState<Record<string, string[]>>({});
+  const [searchPerm, setSearchPerm] = useState("");
+  const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set(PERMISSION_CATEGORIES.map(c => c.id)));
+  const [applyRoleDialog, setApplyRoleDialog] = useState(false);
+  const [selectedApplyRole, setSelectedApplyRole] = useState("");
+
+  useEffect(() => {
+    setProfiles(localDb.profiles.getAll());
+    try {
+      const stored = localStorage.getItem("tms_custom_permissions");
+      if (stored) setCustomPerms(JSON.parse(stored));
+    } catch { /* ignore */ }
+  }, []);
+
+  const selected = profiles.find(p => p.id === selectedId);
+
+  const getEffective = (profile: UserProfile): string[] => {
+    if (customPerms[profile.id]) return customPerms[profile.id];
+    return getPermissionsForRoles(profile.roles);
+  };
+
+  const getDefault = (profile: UserProfile): string[] => getPermissionsForRoles(profile.roles);
+
+  const togglePerm = (userId: string, permKey: string) => {
+    setCustomPerms(prev => {
+      const current = prev[userId] || getPermissionsForRoles(profiles.find(p => p.id === userId)?.roles || []);
+      const updated = current.includes(permKey) ? current.filter(p => p !== permKey) : [...current, permKey];
+      const next = { ...prev, [userId]: updated };
+      localStorage.setItem("tms_custom_permissions", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const toggleCategory = (catId: string, userId: string) => {
+    const catPerms = ALL_PERMISSIONS.filter(p => p.category === catId);
+    const effective = getEffective(profiles.find(p => p.id === userId) || profiles[0]);
+    const allOn = catPerms.every(p => effective.includes(p.key));
+    setCustomPerms(prev => {
+      const current = prev[userId] || getPermissionsForRoles(profiles.find(p => p.id === userId)?.roles || []);
+      let updated: string[];
+      if (allOn) {
+        updated = current.filter(k => !catPerms.some(p => p.key === k));
+      } else {
+        const newKeys = catPerms.map(p => p.key).filter(k => !current.includes(k));
+        updated = [...current, ...newKeys];
+      }
+      const next = { ...prev, [userId]: updated };
+      localStorage.setItem("tms_custom_permissions", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const resetDefaults = (userId: string) => {
+    setCustomPerms(prev => {
+      const next = { ...prev };
+      delete next[userId];
+      localStorage.setItem("tms_custom_permissions", JSON.stringify(next));
+      return next;
+    });
+    toast({ title: "تم", description: "تم إعادة الصلاحيات للوضع الافتراضي" });
+  };
+
+  const applyRolePermissions = () => {
+    if (!selectedId || !selectedApplyRole) return;
+    const rolePerms = ROLE_PERMISSIONS[selectedApplyRole] || ROLE_PERMISSIONS.individual;
+    setCustomPerms(prev => {
+      const next = { ...prev, [selectedId]: [...rolePerms] };
+      localStorage.setItem("tms_custom_permissions", JSON.stringify(next));
+      return next;
+    });
+    setApplyRoleDialog(false);
+    setSelectedApplyRole("");
+    toast({ title: "تم", description: "تم تطبيق صلاحيات الدور كنقطة بداية — يمكنك الآن تعديلها" });
+  };
+
+  const copyPermsFrom = (fromUserId: string) => {
+    if (!selectedId || fromUserId === selectedId) return;
+    const fromPerms = getEffective(profiles.find(p => p.id === fromUserId) || profiles[0]);
+    setCustomPerms(prev => {
+      const next = { ...prev, [selectedId]: [...fromPerms] };
+      localStorage.setItem("tms_custom_permissions", JSON.stringify(next));
+      return next;
+    });
+    toast({ title: "تم", description: "تم نسخ الصلاحيات — يمكنك الآن تعديلها" });
+  };
+
+  const toggleCatExpanded = (catId: string) => {
+    setExpandedCats(prev => {
+      const next = new Set(prev);
+      if (next.has(catId)) next.delete(catId); else next.add(catId);
+      return next;
+    });
+  };
+
+  const expandAll = () => setExpandedCats(new Set(PERMISSION_CATEGORIES.map(c => c.id)));
+  const collapseAll = () => setExpandedCats(new Set());
+
+  const filteredPerms = searchPerm
+    ? ALL_PERMISSIONS.filter(p => p.label.includes(searchPerm) || p.description.includes(searchPerm) || p.key.includes(searchPerm))
+    : ALL_PERMISSIONS;
+
+  const visibleCategories = PERMISSION_CATEGORIES.filter(cat =>
+    filteredPerms.some(p => p.category === cat.id)
+  );
+
+  return (
+    <div className="space-y-4">
+      <h3 className="font-bold text-sm text-foreground flex items-center gap-2"><Shield className="w-4 h-4 text-primary" />إدارة الصلاحيات</h3>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        {/* User List */}
+        <div className="bg-card rounded-lg border border-border overflow-hidden">
+          <div className="p-2 border-b border-border bg-muted/30 flex items-center justify-between">
+            <p className="text-xs font-bold">الموظفون ({profiles.length})</p>
+          </div>
+          <div className="max-h-[60vh] overflow-y-auto">
+            {profiles.map(p => {
+              const eff = getEffective(p);
+              const isCustom = !!customPerms[p.id];
+              return (
+                <button key={p.id} onClick={() => setSelectedId(p.id)}
+                  className={`w-full text-right px-3 py-2.5 border-b border-border/30 text-xs transition-colors ${selectedId === p.id ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted/30"}`}>
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium truncate">{p.name}</p>
+                    {isCustom && <span className="text-[9px] text-warning bg-warning/10 rounded px-1 shrink-0">مخصّص</span>}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">{p.department} • {p.roles.join(" + ")}</p>
+                  <p className="text-[9px] text-muted-foreground">{eff.length}/{ALL_PERMISSIONS.length} صلاحية</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Permissions Panel */}
+        <div className="lg:col-span-2 bg-card rounded-lg border border-border overflow-hidden">
+          {selected ? (
+            <>
+              <div className="p-2.5 border-b border-border bg-muted/30">
+                <div className="flex items-center justify-between mb-1">
+                  <div>
+                    <p className="text-xs font-bold text-foreground">{selected.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{selected.department} • {selected.roles.join(" + ")}</p>
+                  </div>
+                  <div className="flex gap-1.5 no-print">
+                    {customPerms[selected.id] && (
+                      <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => resetDefaults(selected.id)}>
+                        <RotateCcw className="w-3 h-3" />افتراضي
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => setApplyRoleDialog(true)}>
+                      <Copy className="w-3 h-3" />تطبيق دور
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 mt-1.5">
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${(getEffective(selected).length / ALL_PERMISSIONS.length) * 100}%` }} />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground shrink-0">{getEffective(selected).length}/{ALL_PERMISSIONS.length}</span>
+                </div>
+              </div>
+
+              <div className="p-3 no-print flex flex-wrap gap-2 items-center">
+                <div className="relative flex-1 min-w-[150px]">
+                  <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                  <Input value={searchPerm} onChange={e => setSearchPerm(e.target.value)} placeholder="بحث في الصلاحيات..." className="ps-7 h-7 text-[11px]" />
+                </div>
+                <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={expandAll}>توسيع الكل</Button>
+                <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={collapseAll}>طي الكل</Button>
+              </div>
+
+              <div className="px-3 pb-3 max-h-[50vh] overflow-y-auto space-y-2">
+                {visibleCategories.map(cat => {
+                  const catPerms = filteredPerms.filter(p => p.category === cat.id);
+                  if (!catPerms.length) return null;
+                  const effective = getEffective(selected);
+                  const catOn = catPerms.filter(p => effective.includes(p.key)).length;
+                  const catTotal = catPerms.length;
+                  const isExpanded = expandedCats.has(cat.id);
+                  const allOn = catTotal > 0 && catOn === catTotal;
+
+                  return (
+                    <div key={cat.id} className="border border-border rounded-lg overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => toggleCatExpanded(cat.id)}>
+                        <div className="flex items-center gap-2">
+                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                          <Lock className="w-3.5 h-3.5 text-primary" />
+                          <span className="text-xs font-bold text-foreground">{cat.label}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${allOn ? "bg-success/10 text-success" : catOn > 0 ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground"}`}>{catOn}/{catTotal}</span>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); toggleCategory(cat.id, selected.id); }}
+                          className={`text-[10px] px-2 py-0.5 rounded transition-colors ${allOn ? "bg-success/20 text-success hover:bg-success/30" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+                          {allOn ? "إلغاء الكل" : "تحديد الكل"}
+                        </button>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="p-2 space-y-1">
+                          {catPerms.map(perm => {
+                            const on = effective.includes(perm.key);
+                            const isDefault = getDefault(selected).includes(perm.key);
+                            return (
+                              <div key={perm.key} className={`rounded-lg border transition-colors ${on ? "border-primary/20 bg-primary/5" : "border-border bg-muted/20"}`}>
+                                <label className="flex items-start gap-2.5 px-3 py-2 cursor-pointer">
+                                  <Checkbox checked={on} onCheckedChange={() => togglePerm(selected.id, perm.key)} className="mt-0.5 scale-90" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className={`text-[11px] font-medium ${on ? "text-foreground" : "text-muted-foreground"}`}>{perm.label}</span>
+                                      {customPerms[selected.id] && (
+                                        <span className={`text-[8px] px-1 rounded ${on !== isDefault ? (on ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive") : "bg-muted text-muted-foreground"}`}>
+                                          {on !== isDefault ? (on ? "+مضافة" : "-محذوفة") : "افتراضي"}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground mt-0.5">{perm.description}</p>
+                                    <p className="text-[9px] text-muted-foreground/70 mt-0.5 italic">مثال: {perm.example}</p>
+                                  </div>
+                                </label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <Shield className="w-10 h-10 mb-2 opacity-30" />
+              <p className="text-xs">اختر موظف من القائمة لتعديل صلاحياته</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Apply Role Dialog */}
+      <Dialog open={applyRoleDialog} onOpenChange={setApplyRoleDialog}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Copy className="w-5 h-5 text-primary" />تطبيق صلاحيات دور</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-xs text-muted-foreground">سيتم استبدال صلاحيات <strong>{selected?.name}</strong> بصلاحيات الدور المختار كنقطة بداية. يمكنك بعد ذلك تعديل أي صلاحية فردية.</p>
+            <Select value={selectedApplyRole} onValueChange={setSelectedApplyRole}>
+              <SelectTrigger><SelectValue placeholder="اختر الدور" /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(ROLE_PERMISSIONS).map(([role, perms]) => (
+                  <SelectItem key={role} value={role}>
+                    {role === "admin" ? "مدير النظام" : role === "dept_manager" ? "مدير القسم" : role === "unit_head" ? "رئيس شعبة (عام)" : role === "prep_unit_head" ? "رئيس شعبة الإعداد" : role === "curriculum_unit_head" ? "رئيس شعبة المناهج" : role === "trainer" ? "مدرب" : role === "supervisor" ? "مشرف" : "فرد"} ({perms.length} صلاحية)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedApplyRole && (
+              <div className="bg-muted/30 rounded-lg p-3">
+                <p className="text-[10px] text-muted-foreground">سيتم تفعيل {ROLE_PERMISSIONS[selectedApplyRole]?.length || 0} صلاحية من أصل {ALL_PERMISSIONS.length}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setApplyRoleDialog(false)}>إلغاء</Button>
+            <Button size="sm" onClick={applyRolePermissions} disabled={!selectedApplyRole} className="gap-1"><Copy className="w-3.5 h-3.5" />تطبيق</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// ===== DESIGNS TAB =====
+const DesignsTab = () => {
+  const [selected, setSelected] = useState<string | null>(null);
+  return (
+    <div className="space-y-4">
+      <h3 className="font-bold text-sm text-foreground flex items-center gap-2"><Palette className="w-4 h-4 text-primary" />معرض التصاميم</h3>
+      <p className="text-[11px] text-muted-foreground">نماذج لوحات القيادة المتاحة</p>
+      {[
+        { id: "classic", title: "التصميم الكلاسيكي", badge: "مدير" },
+        { id: "stages", title: "تصميم مراحل المناهج", badge: "مناهج" },
+        { id: "individual", title: "اللوحة الشخصية", badge: "مستخدم" },
+        { id: "notifications", title: "الإشعارات والتنبيهات", badge: "جميع" },
+      ].map(d => (
+        <div key={d.id}>
+          <div className="flex items-center gap-3 cursor-pointer py-1" onClick={() => setSelected(selected === d.id ? null : d.id)}>
+            <div className={`w-3 h-3 rounded-full border-2 transition-colors ${selected === d.id ? "bg-primary border-primary" : "border-muted-foreground"}`} />
+            <span className="text-xs font-bold">{d.title}</span>
+            <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">{d.badge}</span>
+          </div>
+          {selected === d.id && (
+            <div className="border border-primary/20 rounded-lg p-3 mt-1 animate-fade-in">
+              <p className="text-[11px] text-muted-foreground">عرض التصميم — يظهر في لوحة القيادة حسب دور المستخدم</p>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ===== TOOLS TAB =====
+const ToolsTab = ({ logout, userName }: { logout: () => Promise<void>; userName: string }) => {
+  const [errMonVisible, setErrMonVisible] = useState(false);
+
+  const toggleErrMon = () => {
+    const next = !errMonVisible;
+    setErrMonVisible(next);
+    window.dispatchEvent(new CustomEvent("toggle-error-monitor", { detail: { visible: next } }));
+    toast({ title: next ? "مراقب الأخطاء مفعّل" : "مراقب الأخطاء معطّل" });
+  };
+
+  const shareLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast({ title: "تم نسخ الرابط" });
+  };
+
+  return (
+    <div className="space-y-3">
+      <h3 className="font-bold text-sm text-foreground flex items-center gap-2"><Bug className="w-4 h-4 text-primary" />أدوات</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <button onClick={toggleErrMon} className="bg-card border border-border rounded-lg p-3 flex items-center gap-3 hover:shadow-md transition-all text-right">
+          <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${errMonVisible ? "bg-warning/10" : "bg-muted"}`}><Bug className={`w-4 h-4 ${errMonVisible ? "text-warning" : "text-muted-foreground"}`} /></div>
+          <div><p className="text-xs font-bold">مراقب الأخطاء</p><p className="text-[10px] text-muted-foreground">{errMonVisible ? "مفعّل" : "معطّل"}</p></div>
+        </button>
+        <button onClick={shareLink} className="bg-card border border-border rounded-lg p-3 flex items-center gap-3 hover:shadow-md transition-all text-right">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><Share2 className="w-4 h-4 text-primary" /></div>
+          <div><p className="text-xs font-bold">مشاركة الرابط</p><p className="text-[10px] text-muted-foreground">نسخ رابط الصفحة</p></div>
+        </button>
+        <button onClick={logout} className="bg-card border border-destructive/20 rounded-lg p-3 flex items-center gap-3 hover:bg-destructive/5 transition-all text-right">
+          <div className="w-9 h-9 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0"><LogOut className="w-4 h-4 text-destructive" /></div>
+          <div><p className="text-xs font-bold text-destructive">تسجيل الخروج</p><p className="text-[10px] text-muted-foreground">خروج من {userName}</p></div>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default Settings;

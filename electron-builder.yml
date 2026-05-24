@@ -1,0 +1,17 @@
+appId: com.tadreeb.tms
+productName: نظام التدريب
+directories:
+  output: release
+files:
+  - dist/**/*
+  - server/**/*
+  - electron/**/*
+  - package.json
+asar: true
+win:
+  target: portable
+  signAndEditExecutable: false
+mac:
+  target: dir
+electronDownload:
+  version: 35.1.0
