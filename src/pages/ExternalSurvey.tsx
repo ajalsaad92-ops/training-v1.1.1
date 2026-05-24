@@ -19,9 +19,31 @@ export default function ExternalSurvey() {
   
   // Form State
   const [name, setName] = useState("");
-  const [rating1, setRating1] = useState(0); // General Rating
-  const [rating2, setRating2] = useState(0); // Specific Rating (Trainer/Environment)
+  const [scores, setScores] = useState<Record<string, number>>({});
   const [notes, setNotes] = useState("");
+
+  const surveyQuestions = {
+    trainee: [
+      { id: "q1", label: "التمكن من المادة العلمية ومحتوى الدورة" },
+      { id: "q2", label: "طريقة العرض وقدرة المدرب على توصيل المعلومات" },
+      { id: "q3", label: "التفاعل مع المتدربين والإجابة على الاستفسارات" },
+      { id: "q4", label: "مدى ملاءمة بيئة التدريب (القاعة، الخدمات، الخ)" }
+    ],
+    trainer: [
+      { id: "q1", label: "مستوى التفاعل والمشاركة أثناء الدورة" },
+      { id: "q2", label: "مدى استيعاب المتدرب للمادة العلمية" },
+      { id: "q3", label: "الالتزام بالحضور والمواعيد" },
+      { id: "q4", label: "تطبيق المهارات العملية بالشكل المطلوب" }
+    ],
+    supervisor: [
+      { id: "q1", label: "مدى تحقيق أهداف الدورة المخطط لها" },
+      { id: "q2", label: "التزام المدرب والمتدربين بالجدول الزمني" },
+      { id: "q3", label: "مستوى التحضير والتنظيم العام للدورة" },
+      { id: "q4", label: "جودة المادة العلمية وكفاءة المدرب بشكل عام" }
+    ]
+  };
+
+  const currentQuestions = surveyQuestions[role as keyof typeof surveyQuestions] || surveyQuestions.trainee;
 
   useEffect(() => {
     // Check if course exists in localDb first (if accessed from admin device)
@@ -54,8 +76,11 @@ export default function ExternalSurvey() {
       toast({ title: "خطأ", description: "يرجى كتابة الاسم", variant: "destructive" });
       return;
     }
-    if (rating1 === 0 || rating2 === 0) {
-      toast({ title: "خطأ", description: "يرجى تحديد التقييم بالنجوم", variant: "destructive" });
+    
+    // Check if all questions are rated
+    const unrated = currentQuestions.filter(q => !scores[q.id] || scores[q.id] === 0);
+    if (unrated.length > 0) {
+      toast({ title: "خطأ", description: "يرجى إكمال التقييم لجميع البنود بالنجوم", variant: "destructive" });
       return;
     }
 
@@ -67,10 +92,7 @@ export default function ExternalSurvey() {
             course_id: courseId!,
             evaluator_name: name,
             evaluator_role: role === "trainee" ? "متدرب" : role === "trainer" ? "مدرب" : "مشرف",
-            scores: {
-              general: rating1,
-              specific: rating2
-            },
+            scores: scores,
             notes: notes,
             is_external: true
           }
@@ -160,17 +182,16 @@ export default function ExternalSurvey() {
             />
           </div>
 
-          <StarRating 
-            value={rating1} 
-            onChange={setRating1} 
-            label={role === "trainee" ? "تقييم المدرب والمادة العلمية" : "التقييم العام للدورة والتفاعل"} 
-          />
-
-          <StarRating 
-            value={rating2} 
-            onChange={setRating2} 
-            label={role === "trainee" ? "تقييم قاعة التدريب والخدمات" : "تقييم مستوى المتدربين والبيئة"} 
-          />
+          <div className="space-y-6">
+            {currentQuestions.map((q) => (
+              <StarRating 
+                key={q.id}
+                value={scores[q.id] || 0} 
+                onChange={(val) => setScores(prev => ({ ...prev, [q.id]: val }))} 
+                label={q.label} 
+              />
+            ))}
+          </div>
 
           <div className="space-y-2">
             <Label>ملاحظات إضافية (اختياري)</Label>

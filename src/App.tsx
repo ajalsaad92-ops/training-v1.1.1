@@ -58,7 +58,7 @@ const AppRoutes = () => {
 
   if (loading) return <div className="h-screen w-full flex items-center justify-center"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>;
 
-  if (serverOk === false) {
+  if (serverOk === false && !window.location.pathname.startsWith("/survey")) {
     const host = window.location.hostname;
     const isHostedApp = /lovable\.(app|dev)$|lovableproject\.com$|vercel\.app$|netlify\.app$/i.test(host);
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
