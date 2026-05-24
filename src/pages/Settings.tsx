@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
-import { localDb, type UserProfile } from "@/lib/localStore";
+import { localDb, type UserProfile, clearAllStoreData } from "@/lib/localStore";
 import {
   PERMISSION_CATEGORIES, ALL_PERMISSIONS, ROLE_PERMISSIONS,
   getPermissionsForRoles, getPermissionDef,
@@ -82,9 +82,9 @@ const Settings = () => {
     a.download = `tms-auto-backup-before-reset-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    localStorage.removeItem("tms_local_store");
     localStorage.removeItem("tms_custom_permissions");
-    toast({ title: "تم إعادة التعيين", description: "تم حفظ نسخة احتياطية تلقائياً قبل المسح" });
+    clearAllStoreData();
+    toast({ title: "تم إعادة التعيين", description: "تم تفريغ جميع البيانات وحفظ نسخة احتياطية تلقائياً" });
     setTimeout(() => window.location.reload(), 500);
   };
 

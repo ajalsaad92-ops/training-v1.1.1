@@ -475,6 +475,39 @@ export function resetStore() {
   saveStore();
 }
 
+export function clearAllStoreData() {
+  const emptyStore: StoreData = {
+    employees: [],
+    courses: [],
+    trainees: [],
+    hrRequests: [],
+    curriculumItems: [],
+    correspondence: [],
+    tasks: [],
+    taskHandovers: [],
+    taskComments: [],
+    notifications: [],
+    auditLog: [],
+    profiles: defaultUserAccounts.map(a => a.profile),
+    userAccounts: defaultUserAccounts,
+    governorateTraining: [],
+    followUpRecords: [],
+    followUpNotifications: [],
+    weekSchedules: [],
+    trainingPlanImports: [],
+    archiveDocuments: [],
+    archiveDocTypes: defaultArchiveDocTypes,
+    archiveLevels: defaultArchiveLevels,
+    archiveParts: defaultArchiveParts,
+    archiveSections: defaultArchiveSections,
+    archiveUserPerms: [],
+    archiveYears: defaultArchiveYears,
+    evaluations: [],
+  };
+  store = emptyStore;
+  saveStore();
+}
+
 // === CRUD helpers ===
 function getAll<T>(key: keyof StoreData): T[] {
   const s = getStore();
