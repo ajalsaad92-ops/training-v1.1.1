@@ -196,21 +196,55 @@ const GeneralTab = ({ backupDone, onBackup, onReset }: { backupDone: boolean; on
 
 // ===== USERS TAB =====
 const UsersTab = () => {
-  const [users, setUsers] = useState<Array<UserProfile & { email?: string }>>([]);
+  const [users, setUsers] = useState<Array<UserProfile & { email?: string; password?: string }>>([]);
   const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDetail, setShowDetail] = useState<string | null>(null);
   const [userSearch, setUserSearch] = useState("");
   const [form, setForm] = useState({ email: "", password: "", name: "", section: "", position: "موظف", phone: "" });
+  const [editForm, setEditForm] = useState({ id: "", email: "", name: "", section: "", position: "موظف", phone: "", roles: [] as string[], active: true });
   const [saving, setSaving] = useState(false);
   const { has, isAdmin } = useUserRole();
   const { impersonate } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showEditPassword, setShowEditPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+
+  const roleOptions = [
+    { value: "admin", label: "مدير النظام" },
+    { value: "dept_manager", label: "مدير القسم" },
+    { value: "unit_head", label: "رئيس شعبة" },
+    { value: "trainer", label: "مدرب" },
+    { value: "supervisor", label: "مشرف" },
+    { value: "individual", label: "موظف" },
+  ];
+
+  const positionRoleMap: Record<string, string[]> = {
+    "مدير النظام (Admin)": ["admin"],
+    "مدير القسم": ["dept_manager"],
+    "مسؤول شعبة": ["unit_head"],
+    "مدرب": ["trainer"],
+    "مشرف": ["supervisor"],
+    "موظف": ["individual"],
+  };
 
   const refresh = useCallback(() => {
     const profiles = localDb.profiles.getAll();
     const accounts = localDb.userAccounts.getAll();
-    setUsers(profiles.map(p => ({ ...p, email: accounts.find(a => a.profile.id === p.id)?.email || "" })));
+    setUsers(profiles.map(p => ({
+      ...p,
+      email: accounts.find((a: any) => a.profile?.id === p.id)?.email || "",
+      password: accounts.find((a: any) => a.profile?.id === p.id)?.password || "",
+    })));
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  const sectionOptions = useMemo(() => {
+    const fromDb = [...new Set(localDb.employees.getAll().map((e: any) => e.section).filter(Boolean))];
+    const defaults = ["شعبة الإعداد والتدريب", "شعبة المناهج"];
+    return [...new Set([...fromDb, ...defaults])];
+  }, [refresh]);
 
   const handleAdd = () => {
     if (!form.email || !form.password || !form.name) { toast({ title: "نقص بيانات", variant: "destructive" }); return; }
@@ -218,93 +252,347 @@ const UsersTab = () => {
     if (existing) { toast({ title: "خطأ", description: "البريد الإلكتروني مستخدم بالفعل", variant: "destructive" }); return; }
     setSaving(true);
     const id = `emp-${Date.now()}`;
-    let roles = ["individual"];
-    if (form.position === "مدير النظام (Admin)") roles = ["admin"];
-    else if (form.position === "مدير القسم") roles = ["dept_manager"];
-    else if (form.position === "مسؤول شعبة") roles = ["unit_head"];
-    
+    const roles = positionRoleMap[form.position] || ["individual"];
     const profile = { id, name: form.name, department: "قسم التدريب", section: form.section, position: form.position, phone: form.phone, roles, active: true };
     localDb.employees.insert({ id, name: form.name, department: "قسم التدريب", section: form.section, position: form.position, phone: form.phone, work_schedule: "daily" as const });
     localDb.profiles.insert(profile);
     localDb.userAccounts.insert({ email: form.email, password: form.password, profile });
-    toast({ title: "تم", description: "تم إنشاء المستخدم" });
+    toast({ title: "تم", description: "تم إنشاء المستخدم بنجاح" });
     setShowAdd(false);
     setForm({ email: "", password: "", name: "", section: "", position: "موظف", phone: "" });
     refresh();
     setSaving(false);
   };
 
-  const handleDelete = (id: string) => {
-    localDb.profiles.update(id, { active: false });
-    refresh();
-    toast({ title: "تم تعطيل الحساب" });
+  const openEdit = (u: UserProfile & { email?: string; password?: string }) => {
+    setEditForm({
+      id: u.id,
+      email: u.email || "",
+      name: u.name,
+      section: u.section || "",
+      position: u.position || "موظف",
+      phone: u.phone || "",
+      roles: [...(u.roles || [])],
+      active: u.active !== false,
+    });
+    setNewPassword("");
+    setShowEditPassword(false);
+    setShowEdit(true);
   };
+
+  const handleEditSave = () => {
+    if (!editForm.name) { toast({ title: "خطأ", description: "الاسم مطلوب", variant: "destructive" }); return; }
+    setSaving(true);
+    const roles = positionRoleMap[editForm.position] || ["individual"];
+    localDb.profiles.update(editForm.id, {
+      name: editForm.name,
+      section: editForm.section,
+      position: editForm.position,
+      phone: editForm.phone,
+      roles,
+      active: editForm.active,
+    });
+    const emp = localDb.employees.getAll().find((e: any) => e.id === editForm.id);
+    if (emp) {
+      localDb.employees.update(editForm.id, {
+        name: editForm.name,
+        section: editForm.section,
+        position: editForm.position,
+        phone: editForm.phone,
+      });
+    }
+    const account = localDb.userAccounts.getAll().find((a: any) => a.profile?.id === editForm.id);
+    if (account) {
+      const updates: Record<string, unknown> = {};
+      if (editForm.email && editForm.email !== account.email) {
+        const dup = localDb.userAccounts.getAll().find((a: any) => a.email === editForm.email && a.profile?.id !== editForm.id);
+        if (dup) { toast({ title: "خطأ", description: "البريد مستخدم بالفعل", variant: "destructive" }); setSaving(false); return; }
+        updates.email = editForm.email;
+      }
+      if (showEditPassword && newPassword) {
+        updates.password = newPassword;
+      }
+      if (Object.keys(updates).length > 0) {
+        localDb.userAccounts.update(account.id || account.email, updates);
+      }
+    }
+    toast({ title: "تم", description: "تم تحديث بيانات المستخدم" });
+    setShowEdit(false);
+    refresh();
+    setSaving(false);
+  };
+
+  const handleToggleActive = (id: string, currentActive: boolean) => {
+    localDb.profiles.update(id, { active: !currentActive });
+    toast({ title: "تم", description: !currentActive ? "تم تفعيل الحساب" : "تم تعطيل الحساب" });
+    refresh();
+  };
+
+  const handleDeleteUser = (id: string) => {
+    if (!confirm("حذف المستخدم نهائياً؟ لا يمكن التراجع.")) return;
+    localDb.profiles.delete(id);
+    const account = localDb.userAccounts.getAll().find((a: any) => a.profile?.id === id);
+    if (account) localDb.userAccounts.delete(account.id || account.email);
+    const emp = localDb.employees.getAll().find((e: any) => e.id === id);
+    if (emp) localDb.employees.delete(id);
+    toast({ title: "تم", description: "تم حذف المستخدم" });
+    refresh();
+  };
+
+  const filteredUsers = users.filter(u =>
+    !userSearch || u.name.includes(userSearch) || (u.email || "").includes(userSearch) || u.section?.includes(userSearch)
+  );
+
+  const activeCount = filteredUsers.filter(u => u.active !== false).length;
+  const inactiveCount = filteredUsers.filter(u => u.active === false).length;
+
+  const detailUser = users.find(u => u.id === showDetail);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-bold text-sm text-foreground flex items-center gap-2"><Users className="w-4 h-4 text-primary" />المستخدمين</h3>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={refresh}><RefreshCw className="w-3.5 h-3.5" /></Button>
-          {has("add_user") && <Button size="sm" onClick={() => setShowAdd(true)} className="gap-1"><UserPlus className="w-3.5 h-3.5" />جديد</Button>}
+          <Button variant="outline" size="sm" onClick={refresh} className="gap-1"><RefreshCw className="w-3.5 h-3.5" />تحديث</Button>
+          {has("add_user") && <Button size="sm" onClick={() => { setShowAdd(true); setForm({ email: "", password: "", name: "", section: "", position: "موظف", phone: "" }); }} className="gap-1"><UserPlus className="w-3.5 h-3.5" />مستخدم جديد</Button>}
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Input placeholder="بحث..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="h-7 text-xs max-w-[180px]" />
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input placeholder="بحث بالاسم أو البريد أو الشعبة..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="ps-8 h-8 text-xs" />
+        </div>
+        <div className="flex gap-2 text-[10px]">
+          <span className="px-2 py-1 rounded bg-success/10 text-success">{activeCount} نشط</span>
+          <span className="px-2 py-1 rounded bg-muted text-muted-foreground">{inactiveCount} معطل</span>
+        </div>
       </div>
 
       <div className="bg-card rounded-lg border border-border overflow-x-auto">
         <table className="w-full text-xs text-right">
-          <thead className="bg-muted/50"><tr><th className="p-2">الاسم</th><th className="p-2">البريد</th><th className="p-2">القسم</th><th className="p-2">الأدوار</th>{has("delete_user") && <th className="p-2"></th>}</tr></thead>
+          <thead className="bg-muted/50"><tr>
+            <th className="p-2">الاسم</th>
+            <th className="p-2">البريد</th>
+            <th className="p-2">الشعبة</th>
+            <th className="p-2">المنصب</th>
+            <th className="p-2">الأدوار</th>
+            <th className="p-2">الحالة</th>
+            <th className="p-2">إجراءات</th>
+          </tr></thead>
           <tbody>
-            {users.filter(u => u.active !== false && (!userSearch || u.name.includes(userSearch) || (u.email || "").includes(userSearch))).map(u => (
-              <tr key={u.id} className="border-t border-border/50 hover:bg-muted/20">
+            {filteredUsers.length > 0 ? filteredUsers.map(u => (
+              <tr key={u.id} className={`border-t border-border/50 hover:bg-muted/20 ${u.active === false ? "opacity-50" : ""}`}>
                 <td className="p-2 font-medium">{u.name}</td>
                 <td className="p-2 text-muted-foreground" dir="ltr">{u.email || "—"}</td>
-                <td className="p-2 text-muted-foreground">{u.section || u.department}</td>
-                <td className="p-2"><div className="flex gap-0.5 flex-wrap">{u.roles.map(r => <span key={r} className="px-1 py-0.5 rounded bg-primary/10 text-primary text-[10px]">{r}</span>)}</div></td>
-                {has("delete_user") && <td className="p-2 flex gap-1 justify-end">
-                  {isAdmin && u.id !== localDb.profiles.getById(localStorage.getItem("tms_current_user_id") || "")?.id && (
-                    <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => impersonate(u.id)}>دخول كـ</Button>
-                  )}
-                  <Button variant="ghost" size="sm" className="h-6 text-[10px] text-destructive" onClick={() => handleDelete(u.id)}>تعطيل</Button>
-                </td>}
+                <td className="p-2 text-muted-foreground">{u.section || "—"}</td>
+                <td className="p-2 text-muted-foreground">{u.position || "—"}</td>
+                <td className="p-2"><div className="flex gap-0.5 flex-wrap">{(u.roles || []).map(r => <span key={r} className="px-1 py-0.5 rounded bg-primary/10 text-primary text-[10px]">{r}</span>)}</div></td>
+                <td className="p-2">
+                  {u.active !== false
+                    ? <span className="px-1.5 py-0.5 rounded text-[10px] bg-success/10 text-success">نشط</span>
+                    : <span className="px-1.5 py-0.5 rounded text-[10px] bg-destructive/10 text-destructive">معطل</span>
+                  }
+                </td>
+                <td className="p-2">
+                  <div className="flex gap-1 justify-end">
+                    <button onClick={() => setShowDetail(u.id)} className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20" title="تفاصيل"><Eye className="w-3.5 h-3.5" /></button>
+                    {has("add_user") && <button onClick={() => openEdit(u)} className="p-1.5 rounded-md bg-accent/10 text-accent hover:bg-accent/20" title="تعديل"><Pencil className="w-3.5 h-3.5" /></button>}
+                    {isAdmin && u.id !== localDb.profiles.getById(localStorage.getItem("tms_current_user_id") || "")?.id && (
+                      <button onClick={() => impersonate(u.id)} className="p-1.5 rounded-md bg-warning/10 text-warning hover:bg-warning/20" title="دخول كـ"><Shield className="w-3.5 h-3.5" /></button>
+                    )}
+                    {has("delete_user") && u.id !== localDb.profiles.getById(localStorage.getItem("tms_current_user_id") || "")?.id && (
+                      <>
+                        <button onClick={() => handleToggleActive(u.id, u.active !== false)} className="p-1.5 rounded-md bg-muted text-muted-foreground hover:bg-muted/80" title={u.active !== false ? "تعطيل" : "تفعيل"}>
+                          {u.active !== false ? <XCircle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                        </button>
+                        <button onClick={() => handleDeleteUser(u.id)} className="p-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20" title="حذف نهائي"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </>
+                    )}
+                  </div>
+                </td>
               </tr>
-            ))}
+            )) : (
+              <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">لا يوجد مستخدمون</td></tr>
+            )}
           </tbody>
         </table>
       </div>
 
+      {/* === ADD USER DIALOG === */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>إضافة موظف جديد</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><UserPlus className="w-5 h-5 text-primary" />إنشاء مستخدم جديد</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>الاسم *</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
-            <div><Label>البريد *</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} dir="ltr" /></div>
-            <div><Label>كلمة المرور *</Label><Input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} dir="ltr" /></div>
-            <Select value={form.section} onValueChange={v => setForm({ ...form, section: v })}>
-              <SelectTrigger><SelectValue placeholder="الشعبة" /></SelectTrigger>
-              <SelectContent>
-                {[...new Set(localDb.employees.getAll().map((e: any) => e.section).filter(Boolean))].map(s => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-                <SelectItem value="شعبة الإعداد والتدريب">شعبة الإعداد والتدريب</SelectItem>
-                <SelectItem value="شعبة المناهج">شعبة المناهج</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={form.position} onValueChange={v => setForm({ ...form, position: v })}>
-              <SelectTrigger><SelectValue placeholder="المنصب" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="مدير النظام (Admin)">مدير النظام (Admin)</SelectItem>
-                <SelectItem value="مدير القسم">مدير القسم</SelectItem>
-                <SelectItem value="مسؤول شعبة">مسؤول شعبة</SelectItem>
-                <SelectItem value="موظف">موظف</SelectItem>
-              </SelectContent>
-            </Select>
-            <div><Label>الهاتف</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} dir="ltr" /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">الاسم الكامل *</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="الاسم الثلاثي" /></div>
+              <div><Label className="text-xs">الهاتف</Label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="رقم الهاتف" dir="ltr" /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">البريد الإلكتروني *</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="user@training.iq" dir="ltr" /></div>
+              <div>
+                <Label className="text-xs">كلمة المرور *</Label>
+                <div className="relative">
+                  <Input type={showPassword ? "text" : "password"} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="كلمة المرور" dir="ltr" className="pe-9" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute start-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">الشعبة *</Label>
+                <Select value={form.section} onValueChange={v => setForm({ ...form, section: v })}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="اختر الشعبة" /></SelectTrigger>
+                  <SelectContent>
+                    {sectionOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">المنصب *</Label>
+                <Select value={form.position} onValueChange={v => setForm({ ...form, position: v })}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="المنصب" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="مدير النظام (Admin)">مدير النظام</SelectItem>
+                    <SelectItem value="مدير القسم">مدير القسم</SelectItem>
+                    <SelectItem value="مسؤول شعبة">مسؤول شعبة</SelectItem>
+                    <SelectItem value="مدرب">مدرب</SelectItem>
+                    <SelectItem value="مشرف">مشرف</SelectItem>
+                    <SelectItem value="موظف">موظف</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="bg-muted/30 rounded-lg p-3 space-y-1">
+              <p className="text-[10px] text-muted-foreground">سيتم تعيين الأدوار تلقائياً:</p>
+              <div className="flex gap-1 flex-wrap">
+                {(positionRoleMap[form.position] || ["individual"]).map(r => {
+                  const opt = roleOptions.find(o => o.value === r);
+                  return <span key={r} className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">{opt?.label || r}</span>;
+                })}
+              </div>
+            </div>
           </div>
-          <DialogFooter><Button onClick={handleAdd} disabled={saving} size="sm">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ"}</Button></DialogFooter>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAdd(false)} size="sm">إلغاء</Button>
+            <Button onClick={handleAdd} disabled={saving} size="sm" className="gap-1">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}إنشاء</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* === EDIT USER DIALOG === */}
+      <Dialog open={showEdit} onOpenChange={setShowEdit}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Pencil className="w-5 h-5 text-accent" />تعديل بيانات المستخدم</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">الاسم *</Label><Input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} /></div>
+              <div><Label className="text-xs">الهاتف</Label><Input value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} dir="ltr" /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-xs">البريد الإلكتروني</Label><Input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} dir="ltr" /></div>
+              <div>
+                <Label className="text-xs">تغيير كلمة المرور</Label>
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={showEditPassword} onCheckedChange={(c) => setShowEditPassword(!!c)} id="change_pass" />
+                  <Label htmlFor="change_pass" className="text-[10px] text-muted-foreground">تغيير كلمة المرور</Label>
+                </div>
+                {showEditPassword && (
+                  <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="كلمة المرور الجديدة" dir="ltr" className="mt-1" />
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">الشعبة</Label>
+                <Select value={editForm.section} onValueChange={v => setEditForm({ ...editForm, section: v })}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="الشعبة" /></SelectTrigger>
+                  <SelectContent>
+                    {sectionOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">المنصب</Label>
+                <Select value={editForm.position} onValueChange={v => setEditForm({ ...editForm, position: v })}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="المنصب" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="مدير النظام (Admin)">مدير النظام</SelectItem>
+                    <SelectItem value="مدير القسم">مدير القسم</SelectItem>
+                    <SelectItem value="مسؤول شعبة">مسؤول شعبة</SelectItem>
+                    <SelectItem value="مدرب">مدرب</SelectItem>
+                    <SelectItem value="مشرف">مشرف</SelectItem>
+                    <SelectItem value="موظف">موظف</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="bg-muted/30 rounded-lg p-3 space-y-1">
+              <p className="text-[10px] text-muted-foreground">الأدوار المُعيَّنة:</p>
+              <div className="flex gap-1 flex-wrap">
+                {(positionRoleMap[editForm.position] || ["individual"]).map(r => {
+                  const opt = roleOptions.find(o => o.value === r);
+                  return <span key={r} className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">{opt?.label || r}</span>;
+                })}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox checked={editForm.active} onCheckedChange={(c) => setEditForm({ ...editForm, active: !!c })} id="active_check" />
+              <Label htmlFor="active_check" className="text-xs">الحساب نشط</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEdit(false)} size="sm">إلغاء</Button>
+            <Button onClick={handleEditSave} disabled={saving} size="sm" className="gap-1">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pencil className="w-3.5 h-3.5" />}حفظ التعديلات</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* === USER DETAIL DIALOG === */}
+      <Dialog open={!!showDetail} onOpenChange={() => setShowDetail(null)}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Eye className="w-5 h-5 text-primary" />تفاصيل المستخدم</DialogTitle></DialogHeader>
+          {detailUser && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 bg-muted/30 rounded-lg p-3">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">{detailUser.name.split(" ").map(w => w[0]).join("").slice(0, 2)}</div>
+                <div>
+                  <p className="font-bold text-foreground">{detailUser.name}</p>
+                  <p className="text-xs text-muted-foreground" dir="ltr">{detailUser.email || "—"}</p>
+                </div>
+                <div className="mr-auto">
+                  {detailUser.active !== false
+                    ? <span className="px-2 py-1 rounded text-[10px] bg-success/10 text-success">نشط</span>
+                    : <span className="px-2 py-1 rounded text-[10px] bg-destructive/10 text-destructive">معطل</span>
+                  }
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-muted/20 rounded-lg p-2.5"><p className="text-[10px] text-muted-foreground">الشعبة</p><p className="text-xs font-medium text-foreground">{detailUser.section || "—"}</p></div>
+                <div className="bg-muted/20 rounded-lg p-2.5"><p className="text-[10px] text-muted-foreground">المنصب</p><p className="text-xs font-medium text-foreground">{detailUser.position || "—"}</p></div>
+                <div className="bg-muted/20 rounded-lg p-2.5"><p className="text-[10px] text-muted-foreground">الهاتف</p><p className="text-xs font-medium text-foreground" dir="ltr">{detailUser.phone || "—"}</p></div>
+                <div className="bg-muted/20 rounded-lg p-2.5"><p className="text-[10px] text-muted-foreground">القسم</p><p className="text-xs font-medium text-foreground">{detailUser.department || "—"}</p></div>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-1.5">الأدوار والصلاحيات</p>
+                <div className="flex gap-1 flex-wrap mb-2">
+                  {(detailUser.roles || []).map(r => {
+                    const opt = roleOptions.find(o => o.value === r);
+                    return <span key={r} className="px-2 py-1 rounded bg-primary/10 text-primary text-[10px] font-medium">{opt?.label || r}</span>;
+                  })}
+                </div>
+                <p className="text-[10px] text-muted-foreground">عدد الصلاحيات الفعّالة: {getPermissionsForRoles(detailUser.roles || []).length}</p>
+              </div>
+              <div className="flex gap-2 pt-2 border-t border-border">
+                {has("add_user") && <Button size="sm" variant="outline" className="gap-1" onClick={() => { setShowDetail(null); openEdit(detailUser); }}><Pencil className="w-3.5 h-3.5" />تعديل</Button>}
+                {isAdmin && detailUser.id !== localDb.profiles.getById(localStorage.getItem("tms_current_user_id") || "")?.id && (
+                  <Button size="sm" variant="outline" className="gap-1" onClick={() => { setShowDetail(null); impersonate(detailUser.id); }}><Shield className="w-3.5 h-3.5" />دخول كـ</Button>
+                )}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
