@@ -985,7 +985,7 @@ const Tasks = () => {
                     <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                       {visibleComments.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-2">لا توجد تعليقات بعد</p>
-                      ) : visibleComments.map((c: { id: string; author_id: string; author_name: string; recipient_name?: string; message: string; created_at: string }) => {
+                      ) : visibleComments.map((c: { id: string; author_id: string; author_name: string; recipient_name?: string; message: string; created_at: string; is_hidden?: boolean }) => {
                         const mine = c.author_id === userId;
                         return (
                           <div key={c.id} className={`rounded-lg p-2.5 text-sm animate-slide-up ${mine ? "bg-primary/10 border border-primary/20" : "bg-muted/40 border border-border"}`}>
