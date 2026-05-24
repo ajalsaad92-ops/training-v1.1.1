@@ -85,6 +85,12 @@ function applyRemoteUpdate(remoteData: Record<string, unknown>) {
   const localData = localRaw ? JSON.parse(localRaw) : {};
   const merged = { ...localData, ...remoteData };
   localStorage.setItem("tms_local_store", JSON.stringify(merged));
+  
+  // Notify localStore to clear cache
+  try { window.dispatchEvent(new CustomEvent("tms_remote_update")); } catch { /* noop */ }
+  // Notify UI
+  try { window.dispatchEvent(new CustomEvent("tms_store_changed")); } catch { /* noop */ }
+  
   if (onRemoteUpdate) onRemoteUpdate(merged);
 }
 

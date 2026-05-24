@@ -23,7 +23,7 @@ function useStoreSubscription(refetch: () => void) {
     const onChange = () => refetch();
     const onStorage = (e: StorageEvent) => {
       if (e.key === "tms_local_store") {
-        localDb.invalidateStore();
+        window.dispatchEvent(new CustomEvent("tms_remote_update"));
         refetch();
       }
     };

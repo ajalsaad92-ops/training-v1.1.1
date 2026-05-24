@@ -436,13 +436,47 @@ const getDefaultStore = (): StoreData => ({
 
 let store: StoreData | null = null;
 
+function mergeStoreData(existing: StoreData, seed: StoreData): StoreData {
+  const merged = { ...seed };
+  for (const key of Object.keys(seed) as (keyof StoreData)[]) {
+    const seedVal = seed[key];
+    const existingVal = existing[key];
+    if (existingVal === undefined || existingVal === null) {
+      // New collection in seed that doesn't exist in old data – use seed value
+      (merged as any)[key] = seedVal;
+    } else if (
+      Array.isArray(seedVal) &&
+      Array.isArray(existingVal) &&
+      seedVal.length > 0 &&
+      typeof seedVal[0] === "object" &&
+      seedVal[0] !== null &&
+      "id" in seedVal[0]
+    ) {
+      // Array of objects with `id` – keep existing items, add new seed items
+      const existingIds = new Set(existingVal.map((item: any) => item.id));
+      const newItems = seedVal.filter((item: any) => !existingIds.has(item.id));
+      (merged as any)[key] = [...existingVal, ...newItems];
+    } else {
+      // Non-array field or array without id – keep existing value
+      (merged as any)[key] = existingVal;
+    }
+  }
+  return merged;
+}
+
 function getStore(): StoreData {
   if (store) return store;
   try {
     const currentVer = localStorage.getItem(SEED_VERSION_KEY);
     if (currentVer !== SEED_VERSION) {
-      // Force re-seed with fresh data
-      store = getDefaultStore();
+      // Merge seed data with existing data instead of replacing
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const existing: StoreData = JSON.parse(saved);
+        store = mergeStoreData(existing, getDefaultStore());
+      } else {
+        store = getDefaultStore();
+      }
       localStorage.setItem(SEED_VERSION_KEY, SEED_VERSION);
       saveStore();
       return store;
@@ -703,3 +737,9 @@ export const localDb = {
     getAll: () => getAll<ArchiveYear>("archiveYears"),
   },
 };
+
+// Listen for remote sync updates and invalidate in-memory cache
+// so next getStore() reads fresh data from localStorage
+try {
+  window.addEventListener("tms_remote_update", () => { store = null; });
+} catch { /* SSR safety */ }
