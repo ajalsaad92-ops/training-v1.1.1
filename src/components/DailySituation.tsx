@@ -1,5 +1,7 @@
 ﻿import { useState, useMemo } from "react";
 import { useHRRequests, useEmployees, type HRRequest, type Employee } from "@/hooks/useSupabaseData";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { localDb } from "@/lib/localStore";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -44,6 +46,8 @@ interface DailySituationProps {
 const DailySituation = ({ embedded = false }: DailySituationProps) => {
   const { data: requests, loading: reqLoading, refetch } = useHRRequests();
   const { data: employees, loading: empLoading } = useEmployees();
+  const { user } = useAuth();
+  const { isIndividual, isUnitHead, isManager, isAdmin, section } = useUserRole();
   const [activeDialog, setActiveDialog] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<"all" | "individual" | "group">("all");
   const [selectedEmployee, setSelectedEmployee] = useState("");
@@ -154,15 +158,30 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
       toast({ title: "خطأ", description: "يرجى تعبئة جميع الحقول المطلوبة", variant: "destructive" });
       return;
     }
+    if (isIndividual && form.type === "غياب") {
+      toast({ title: "خطأ", description: "لا يمكنك تسجيل غياب لنفسك", variant: "destructive" });
+      setSaving(false); return;
+    }
     setSaving(true);
-    localDb.hrRequests.insert({
+    const isOwnRequest = form.employee_name === user?.name;
+    const isSubmitterManager = (isManager || isAdmin);
+    const insertPayload: Record<string, unknown> = {
       employee_name: form.employee_name,
       department: form.department,
       type: form.type,
       date: form.date,
       notes: form.notes,
-      approval_status: "pending",
-    });
+      created_by: user?.id,
+    };
+    if (isSubmitterManager && !isOwnRequest) {
+      insertPayload.unit_head_status = "approved";
+      insertPayload.unit_head_by = user?.id;
+      insertPayload.unit_head_at = new Date().toISOString();
+      insertPayload.approval_status = "unit_approved";
+    } else {
+      insertPayload.approval_status = "pending";
+    }
+    localDb.hrRequests.insert(insertPayload);
     toast({ title: "تم", description: "تم تقديم الطلب بنجاح" });
     setSaving(false);
     setShowNewRequest(false);
@@ -207,7 +226,10 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
         </div>
         {embedded && (
           <div className="flex gap-1.5 no-print">
-            <Button variant="outline" size="sm" className="gap-1 h-7 text-xs px-2" onClick={() => setShowNewRequest(true)}>
+            <Button variant="outline" size="sm" className="gap-1 h-7 text-xs px-2" onClick={() => {
+              setForm({ employee_name: isIndividual ? (user?.name || "") : "", department: "", type: "إجازة اعتيادية", date: today, notes: "" });
+              setShowNewRequest(true);
+            }}>
               <Plus className="w-3 h-3" />طلب
             </Button>
           </div>
@@ -247,7 +269,10 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
             </Select>
           )}
 
-          <Button variant="outline" size="sm" className="gap-1" onClick={() => setShowNewRequest(true)}>
+          <Button variant="outline" size="sm" className="gap-1" onClick={() => {
+            setForm({ employee_name: isIndividual ? (user?.name || "") : "", department: "", type: "إجازة اعتيادية", date: today, notes: "" });
+            setShowNewRequest(true);
+          }}>
             <Plus className="w-4 h-4" />طلب جديد
           </Button>
         </div>
@@ -506,22 +531,31 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
           <div className="space-y-3">
             <div>
               <Label>اسم الموظف</Label>
-              <Select value={form.employee_name} onValueChange={(v) => {
-                const emp = employees.find(e => e.name === v);
-                setForm({ ...form, employee_name: v, department: emp?.department || "" });
-              }}>
-                <SelectTrigger><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
-                <SelectContent>
-                  {employees.map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {isIndividual ? (
+                <Input value={user?.name || ""} disabled onChange={() => {}} />
+              ) : (
+                <Select value={form.employee_name} onValueChange={(v) => {
+                  const emp = employees.find(e => e.name === v);
+                  setForm({ ...form, employee_name: v, department: emp?.department || "" });
+                }}>
+                  <SelectTrigger><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
+                  <SelectContent>
+                    {employees
+                      .filter(e => {
+                        if (isUnitHead && !isManager && !isAdmin) return e.section === section;
+                        return true;
+                      })
+                      .map(e => <SelectItem key={e.id} value={e.name}>{e.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div>
               <Label>النوع</Label>
               <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {typeOptions.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  {typeOptions.filter(t => !isIndividual || t.value !== "غياب").map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

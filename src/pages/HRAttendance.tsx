@@ -281,7 +281,7 @@ const HRAttendance = () => {
     });
     if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `تمت الموافقة على طلبك مباشرة من مدير القسم (${req.type})`, type: "info", link: "/hr" });
     const emp = allEmployees.find(e => e.name === req.employee_name);
-    const sectionHeads = allEmployees.filter(e => e.roles?.includes("unit_head") && e.section === emp?.section && e.id !== userId);
+    const sectionHeads = allEmployees.filter(e => (e.roles?.includes("unit_head") || e.roles?.includes("curriculum_unit_head") || e.roles?.includes("prep_unit_head")) && e.section === emp?.section && e.id !== userId);
     sectionHeads.forEach(head => {
       localDb.notifications.insert({ user_id: head.id, message: `تمت الموافقة المباشرة من مدير القسم على طلب ${req.employee_name} (${req.type})`, type: "info", link: "/hr" });
     });
@@ -343,6 +343,11 @@ const HRAttendance = () => {
       return;
     }
     setLeaveSaving(true);
+
+    if (isIndividual && leaveForm.type === "غياب") {
+      toast({ title: "خطأ", description: "لا يمكنك تسجيل غياب لنفسك", variant: "destructive" });
+      setLeaveSaving(false); return;
+    }
 
     if (new Date(leaveForm.date) < new Date(today)) {
       toast({ title: "خطأ", description: "لا يمكن تقديم إجازة بأثر رجعي", variant: "destructive" });
@@ -937,9 +942,14 @@ const HRAttendance = () => {
                   }}>
                     <SelectTrigger><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
                     <SelectContent>
-                      {employees.map(emp => (
-                        <SelectItem key={emp.id} value={emp.name}>{emp.name}</SelectItem>
-                      ))}
+                      {employees
+                        .filter(e => {
+                          if (isUnitHead && !isManager && !isAdmin) return e.section === currentEmpSection;
+                          return true;
+                        })
+                        .map(emp => (
+                          <SelectItem key={emp.id} value={emp.name}>{emp.name}</SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 )}
@@ -958,7 +968,7 @@ const HRAttendance = () => {
                     <SelectItem value="إجازة طارئة">إجازة طارئة</SelectItem>
                     <SelectItem value="خروجية">خروجية</SelectItem>
                     <SelectItem value="واجب">واجب</SelectItem>
-                    <SelectItem value="غياب">غياب</SelectItem>
+                    {!isIndividual && <SelectItem value="غياب">غياب</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
