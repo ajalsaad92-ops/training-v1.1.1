@@ -14,7 +14,7 @@ const STORAGE_KEY = "tms_ui_theme";
 export const UIThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setThemeState] = useState<UITheme>(() => {
     const saved = localStorage.getItem(STORAGE_KEY) as UITheme | null;
-    return saved || "classic";
+    return saved || "aurora"; // Default to the modern Aurora theme instead of classic
   });
 
   useEffect(() => {
