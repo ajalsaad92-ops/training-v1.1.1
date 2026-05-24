@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTasks, useTaskHandovers, useEmployees, useTaskComments } from "@/hooks/useSupabaseData";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -46,6 +46,7 @@ const statusLabels: Record<string, string> = {
   approved: "معتمد",
   proposed: "مقترح بين الشعب",
   rejected: "مرفوض",
+  returned: "معادة للعمل",
 };
 
 const curriculumStages = ["writing", "new_form", "auditing", "printing"];
@@ -127,6 +128,8 @@ const Tasks = () => {
   const [form, setForm] = useState({ title: "", description: "", unit: "", stage: "writing", assigned_to: "", estimated_hours: 0, is_routine: false });
   const [handoverForm, setHandoverForm] = useState({ to_user: "", notes: "" });
   const [saving, setSaving] = useState(false);
+  const [showFinishDialog, setShowFinishDialog] = useState<string | null>(null);
+  const [finishNote, setFinishNote] = useState("");
   const [commentText, setCommentText] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const [threadText, setThreadText] = useState("");
@@ -217,6 +220,7 @@ const Tasks = () => {
       created_by: userId,
       estimated_hours: form.estimated_hours,
       is_routine: form.is_routine,
+      history: [{ status: isProposalToOtherUnit ? "proposed" : "pending", user_id: userId, user_name: userName, timestamp: new Date().toISOString(), note: "تم إنشاء المهمة" }]
     };
     localDb.tasks.insert(payload);
     await logAction(userName, isProposalToOtherUnit ? "اقتراح مهمة بين الشعب" : "إنشاء مهمة", form.title);
@@ -321,10 +325,14 @@ const Tasks = () => {
     }
     const task = tasks.find(t => t.id === taskId);
     if (newStatus === "completed") {
-      if (task) handleMarkCompleted(taskId);
+      if (task) setShowFinishDialog(taskId);
       return;
     }
-    localDb.tasks.update(taskId, { status: newStatus });
+    const history = task?.history || [];
+    history.push({
+      status: newStatus, user_id: userId, user_name: userName, timestamp: new Date().toISOString(), note: `تحديث الحالة إلى ${statusLabels[newStatus] || newStatus}`
+    });
+    localDb.tasks.update(taskId, { status: newStatus, history });
     await logAction(userName, "تحديث حالة مهمة", `${task?.title} → ${statusLabels[newStatus]}`);
     toast({ title: "تم", description: "تم تحديث الحالة" });
     if (task?.assigned_to && task.assigned_to !== userId) {
@@ -334,36 +342,49 @@ const Tasks = () => {
   };
 
   const handleMarkCompleted = async (taskId: string) => {
+    if (!finishNote.trim()) {
+      toast({ title: "خطأ", description: "يرجى كتابة ما تم إنجازه", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
     const task = tasks.find(t => t.id === taskId);
     let points = 0;
     if (task?.estimated_hours && task?.created_at) {
       const hoursSpent = (new Date().getTime() - new Date(task.created_at).getTime()) / (1000 * 60 * 60);
       if (hoursSpent <= task.estimated_hours) points = 2; // Bonus points for fast completion
     }
-    localDb.tasks.update(taskId, { status: "review", pending_points: points });
+    const history = task?.history || [];
+    history.push({
+      status: "review", user_id: userId, user_name: userName, timestamp: new Date().toISOString(), note: finishNote
+    });
+    localDb.tasks.update(taskId, { status: "review", pending_points: points, completion_note: finishNote, history });
     await logAction(userName, "إنهاء مهمة (بانتظار المراجعة)", task?.title || "");
-    toast({ title: "تم", description: "تم تحديد المهمة كمكتملة وهي الآن بانتظار مراجعة رئيس الشعبة" });
-    const targetId = task?.assigned_by || task?.created_by;
+    toast({ title: "تم", description: "تم تحديد المهمة كمكتملة وهي الآن بانتظار مراجعة المنشئ" });
+    const targetId = task?.created_by;
     if (targetId) {
       localDb.notifications.insert({ user_id: targetId, message: `مهمة مكتملة بانتظار المراجعة: ${task?.title || ""}`, type: "info", link: `/tasks?focus=${taskId}` });
-    } else {
-      const profiles = localDb.profiles.getAll();
-      const unitHead = profiles.find((p: any) => (p.roles?.includes("unit_head") || p.roles?.includes("curriculum_unit_head") || p.roles?.includes("prep_unit_head")) && sectionToUnit(p.section) === task?.unit);
-      localDb.notifications.insert({ user_id: unitHead?.id || null, message: `مهمة مكتملة بانتظار المراجعة: ${task?.title || ""}`, type: "info", link: `/tasks?focus=${taskId}` });
     }
+    setSaving(false);
+    setShowFinishDialog(null);
+    setFinishNote("");
     refetch();
   };
 
   const handleApproveTask = async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
-    if (task.created_by === userId || task.assigned_to === userId) {
-      toast({ title: "خطأ", description: "لا يمكنك اعتماد مهمة أنشأتها أو أسندت إليك", variant: "destructive" });
+    if (task.created_by !== userId && !isAdmin) {
+      toast({ title: "خطأ", description: "لا يمكنك اعتماد مهمة إلا إذا كنت منشئها أو مدير النظام", variant: "destructive" });
       return;
     }
+    const history = task?.history || [];
+    history.push({
+      status: "approved", user_id: userId, user_name: userName, timestamp: new Date().toISOString(), note: "تم اعتماد المهمة بنجاح"
+    });
     localDb.tasks.update(taskId, {
       status: "approved",
       achievement_points: (task?.achievement_points || 0) + 1 + (task?.pending_points || 0),
+      history
     });
     await logAction(userName, "اعتماد مهمة", task?.title || "");
     toast({ title: "تم", description: "تم اعتماد المهمة وإضافة نقاط الإنجاز" });
@@ -414,17 +435,21 @@ const Tasks = () => {
       return;
     }
     const task = tasks.find(t => t.id === taskId);
+    const history = task?.history || [];
+    history.push({
+      status: "returned", user_id: userId, user_name: userName, timestamp: new Date().toISOString(), note: commentText
+    });
     localDb.taskComments.insert({
       task_id: taskId,
       author_id: userId,
       author_name: userName,
       message: commentText,
     });
-    localDb.tasks.update(taskId, { status: "in_progress" });
+    localDb.tasks.update(taskId, { status: "in_progress", history });
     await logAction(userName, "إرجاع مهمة مع ملاحظة", task?.title || "");
-    toast({ title: "تم", description: "تم إرجاع المهمة مع الملاحظة" });
+    toast({ title: "تم", description: "تم إرجاع المهمة مع الملاحظة للتنفيذ مرة أخرى" });
     if (task?.assigned_to) {
-      localDb.notifications.insert({ user_id: task.assigned_to, message: `ملاحظة على مهمة: ${task.title}`, type: "warning", link: `/tasks?focus=${taskId}` });
+      localDb.notifications.insert({ user_id: task.assigned_to, message: `تمت إعادة المهمة للتنفيذ بملاحظات: ${task.title}`, type: "warning", link: `/tasks?focus=${taskId}` });
     }
     setCommentText("");
     refetchComments();
@@ -1033,7 +1058,7 @@ const Tasks = () => {
                 </div>
               )}
 
-              {(isUnitHead || isManager || isAdmin) && selectedTask.status === "review" && (
+              {(selectedTask.created_by === userId || isAdmin) && selectedTask.status === "review" && (
                 <div className="border-t border-border pt-3 space-y-3">
                   <p className="text-xs font-bold text-foreground flex items-center gap-2"><MessageSquare className="w-4 h-4 text-warning" />مراجعة المهمة</p>
                   <div className="flex gap-2">
@@ -1052,7 +1077,7 @@ const Tasks = () => {
                   const actions: React.ReactNode[] = [];
                   if (selectedTask.assigned_to === userId && isIndividual) {
                     if (selectedTask.status === "pending") actions.push(<Button key="start" size="sm" variant="outline" className="gap-1" onClick={() => handleUpdateStatus(selectedTask.id, "in_progress")}><Play className="w-3.5 h-3.5" />بدء</Button>);
-                    if (selectedTask.status === "pending" || selectedTask.status === "in_progress") actions.push(<Button key="done" size="sm" className="gap-1" onClick={() => handleMarkCompleted(selectedTask.id)}><CheckCircle2 className="w-3.5 h-3.5" />إنهاء</Button>);
+                    if (selectedTask.status === "pending" || selectedTask.status === "in_progress" || selectedTask.status === "returned") actions.push(<Button key="done" size="sm" className="gap-1" onClick={() => setShowFinishDialog(selectedTask.id)}><CheckCircle2 className="w-3.5 h-3.5" />إنهاء</Button>);
                   }
                   if (canEditTask(selectedTask) && !["completed", "handed_over", "approved", "review"].includes(selectedTask.status)) {
                     if (!selectedTask.is_routine) actions.push(<Button key="advance" size="sm" variant="outline" className="gap-1" onClick={() => handleAdvanceStage(selectedTask.id)}><Zap className="w-3.5 h-3.5" />ترقية</Button>);
@@ -1061,6 +1086,40 @@ const Tasks = () => {
                   return actions;
                 })()}
               </div>
+
+              {selectedTask.history && selectedTask.history.length > 0 && (
+                <div className="border-t border-border pt-3">
+                  <p className="text-xs font-bold text-foreground mb-3 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-accent" />سجل الحالات الزمني</p>
+                  <div className="space-y-0">
+                    {selectedTask.history.map((h: any, i: number) => {
+                      const isLast = i === selectedTask.history.length - 1;
+                      return (
+                        <div key={i} className="flex items-start gap-3">
+                          <div className="flex flex-col items-center">
+                            <div className={`w-3.5 h-3.5 rounded-full shrink-0 border-2 transition-all ${isLast ? "bg-primary border-primary animate-glow-pulse scale-110" : "bg-muted border-muted-foreground/30"}`} />
+                            {!isLast && <div className="w-0.5 h-8 bg-muted-foreground/20" />}
+                          </div>
+                          <div className="pb-4">
+                            <span className={`text-xs font-bold ${isLast ? "text-primary" : "text-muted-foreground"}`}>
+                              {statusLabels[h.status] || h.status}
+                            </span>
+                            <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground">
+                              <span className="font-medium">{h.user_name}</span>
+                              <span>·</span>
+                              <span>{new Date(h.timestamp).toLocaleString("ar-IQ", { dateStyle: "short", timeStyle: "short" })}</span>
+                            </div>
+                            {h.note && (
+                              <div className="mt-1.5 bg-muted/30 rounded-md p-2 text-xs text-foreground border border-border/50">
+                                {h.note}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {(() => {
                 const canSeeThread =
@@ -1139,6 +1198,26 @@ const Tasks = () => {
               })()}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!showFinishDialog} onOpenChange={() => { setShowFinishDialog(null); setFinishNote(""); }}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader><DialogTitle>إنهاء المهمة</DialogTitle></DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <Label>ماذا أنجزت؟ (إلزامي)</Label>
+              <Textarea 
+                value={finishNote} 
+                onChange={e => setFinishNote(e.target.value)} 
+                placeholder="اكتب تفاصيل ما تم إنجازه أو أي ملاحظات للمنشئ..." 
+                rows={4} 
+              />
+            </div>
+            <Button onClick={() => showFinishDialog && handleMarkCompleted(showFinishDialog)} disabled={saving || !finishNote.trim()} className="w-full">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "إرسال للمراجعة"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

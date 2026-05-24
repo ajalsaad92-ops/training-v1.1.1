@@ -636,6 +636,7 @@ export const localDb = {
     getAll: () => getAll<Task>("tasks"),
     insert: (t: Partial<Task>) => insertItem<Task>("tasks", {
       status: "pending", handed_over: false, achievement_points: 0, is_routine: false,
+      history: [], completion_note: null,
       created_at: now(), updated_at: now(), ...t,
     } as Task),
     update: (id: string, u: Partial<Task>) => updateItem<Task>("tasks", id, { updated_at: now(), ...u } as Partial<Task>),
