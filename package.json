@@ -12,7 +12,6 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "server": "node server/index.js",
     "electron:dev": "vite build && electron electron/main.js",
     "electron:build": "vite build && electron-builder --win portable",
     "cap:init": "npx cap init tadreeb-tms com.tadreeb.tms --web-dir dist",

@@ -1,4 +1,4 @@
-import { debouncedPush, getServerAvailable } from "@/lib/serverSync";
+import { debouncedPush, getServerAvailable } from "@/lib/supabaseSync";
 import {
   SEED_EMPLOYEES, SEED_PROFILES, SEED_USER_ACCOUNTS, SEED_CURRICULUM,
   SEED_COURSES, SEED_TRAINEES, SEED_HR, SEED_CORRESPONDENCE, SEED_TASKS,
