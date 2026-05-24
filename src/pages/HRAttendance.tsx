@@ -386,7 +386,7 @@ const HRAttendance = () => {
     await logAction(userName, "رفع طلب إجازة", leaveForm.employee_name);
     toast({ title: "تم", description: "تم رفع طلب الإجازة بنجاح" });
     setShowLeaveForm(false);
-    setLeaveForm({ employee_name: "", type: "إجازة اعتيادية", date: "", notes: "", department: "" });
+    setLeaveForm({ employee_name: "", type: "إجازة اعتيادية", date: "", notes: "", department: "", hours: "1" });
     refetch();
     setLeaveSaving(false);
   };
