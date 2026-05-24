@@ -360,7 +360,7 @@ const HRAttendance = () => {
           setLeaveSaving(false);
           return;
         } else if (sectionOnLeave) {
-          toast({ title: "ملاحظة تعارض", description: `تم تجاوز التعارض لوجود صلاحية. (${sectionOnLeave.employee_name} مجاز)`, variant: "warning" });
+          toast({ title: "ملاحظة تعارض", description: `تم تجاوز التعارض لوجود صلاحية. (${sectionOnLeave.employee_name} مجاز)` });
         }
       }
     }
