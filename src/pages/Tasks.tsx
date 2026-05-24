@@ -32,6 +32,7 @@ const stageLabels: Record<string, string> = {
   pdf: "PDF",
   new_ppt: "عرض تقديمي جديد",
   routine: "مهمة اعتيادية",
+  done: "منجز",
 };
 
 const statusLabels: Record<string, string> = {
@@ -315,12 +316,24 @@ const Tasks = () => {
     localDb.tasks.update(taskId, { status: "review", pending_points: points });
     await logAction(userName, "إنهاء مهمة (بانتظار المراجعة)", task?.title || "");
     toast({ title: "تم", description: "تم تحديد المهمة كمكتملة وهي الآن بانتظار مراجعة رئيس الشعبة" });
-    localDb.notifications.insert({ user_id: null, message: `مهمة مكتملة بانتظار المراجعة: ${task?.title || ""}`, type: "info", link: `/tasks?focus=${taskId}` });
+    const targetId = task?.assigned_by || task?.created_by;
+    if (targetId) {
+      localDb.notifications.insert({ user_id: targetId, message: `مهمة مكتملة بانتظار المراجعة: ${task?.title || ""}`, type: "info", link: `/tasks?focus=${taskId}` });
+    } else {
+      const profiles = localDb.profiles.getAll();
+      const unitHead = profiles.find((p: any) => p.roles?.includes("unit_head") && p.section === task?.unit);
+      localDb.notifications.insert({ user_id: unitHead?.id || null, message: `مهمة مكتملة بانتظار المراجعة: ${task?.title || ""}`, type: "info", link: `/tasks?focus=${taskId}` });
+    }
     refetch();
   };
 
   const handleApproveTask = async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    if (task.created_by === userId || task.assigned_to === userId) {
+      toast({ title: "خطأ", description: "لا يمكنك اعتماد مهمة أنشأتها أو أسندت إليك", variant: "destructive" });
+      return;
+    }
     localDb.tasks.update(taskId, {
       status: "approved",
       achievement_points: (task?.achievement_points || 0) + 1 + (task?.pending_points || 0),
@@ -339,16 +352,20 @@ const Tasks = () => {
       return;
     }
     const task = tasks.find(t => t.id === taskId);
-    localDb.tasks.update(taskId, {
-      status: "in_progress",
-      description: `${task?.description || ""}\n\n📝 ملاحظة رئيس الشعبة: ${commentText}`,
+    localDb.taskComments.insert({
+      task_id: taskId,
+      author_id: userId,
+      author_name: userName,
+      message: commentText,
     });
+    localDb.tasks.update(taskId, { status: "in_progress" });
     await logAction(userName, "إرجاع مهمة مع ملاحظة", task?.title || "");
     toast({ title: "تم", description: "تم إرجاع المهمة مع الملاحظة" });
     if (task?.assigned_to) {
       localDb.notifications.insert({ user_id: task.assigned_to, message: `ملاحظة على مهمة: ${task.title}`, type: "warning", link: `/tasks?focus=${taskId}` });
     }
     setCommentText("");
+    refetchComments();
     refetch();
   };
 
@@ -389,13 +406,15 @@ const Tasks = () => {
   const handleAdvanceStage = async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task || task.is_routine) return;
-    const allStages = [...curriculumStages, ...presentationStages];
+    const allStages = [...curriculumStages, ...presentationStages, "done"];
     const currentIdx = allStages.indexOf(task.stage);
     if (currentIdx < allStages.length - 1) {
       const nextStage = allStages[currentIdx + 1];
-      localDb.tasks.update(taskId, { stage: nextStage });
+      const update: Record<string, unknown> = { stage: nextStage };
+      if (nextStage === "done") update.status = "review";
+      localDb.tasks.update(taskId, update);
       await logAction(userName, "ترقية مرحلة مهمة", `${task.title}: ${stageLabels[task.stage]} → ${stageLabels[nextStage]}`);
-      toast({ title: "تم", description: `تم الانتقال إلى مرحلة: ${stageLabels[nextStage]}` });
+      toast({ title: "تم", description: nextStage === "done" ? "تم إنجاز المهمة — بانتظار المراجعة" : `تم الانتقال إلى مرحلة: ${stageLabels[nextStage]}` });
       refetch();
     }
   };

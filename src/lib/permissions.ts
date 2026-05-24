@@ -18,7 +18,6 @@ export const PERMISSION_CATEGORIES: PermissionCategory[] = [
   { id: "employees", label: "الموظفين", icon: "Shield" },
   { id: "tasks", label: "المهام", icon: "ListTodo" },
   { id: "curriculum", label: "المناهج والعروض", icon: "BookOpen" },
-  { id: "correspondence", label: "الأرشيف الإداري", icon: "FolderArchive" },
   { id: "archive", label: "الأرشيف الإداري", icon: "FolderArchive" },
   { id: "courses", label: "التنفيذ التدريبي", icon: "GraduationCap" },
   { id: "training_plan", label: "الخطة التدريبية", icon: "CalendarDays" },
@@ -92,19 +91,14 @@ export const ALL_PERMISSIONS: PermissionDef[] = [
   { key: "print_curriculum", label: "طباعة صفحة المناهج", description: "استخدام زر الطباعة في صفحة المناهج والعروض", example: "رئيس المناهج يطبع قائمة المناهج وحالاتها", category: "curriculum" },
 
   // ─── الأرشيف الإداري ───
-  { key: "view_correspondence", label: "عرض الأرشيف الإداري", description: "الدخول لصفحة الأرشيف الإداري ورؤية الوثائق الرسمية", example: "المشرف يرى الوثائق الواردة والصادرة في الأرشيف", category: "correspondence" },
-  { key: "add_correspondence", label: "إضافة وثيقة للأرشيف", description: "إضافة وثيقة جديدة للأرشيف الإداري (واردة أو صادرة)", example: "المشرف يضيف كتاب وارد جديد للأرشيف", category: "correspondence" },
-  { key: "upload_correspondence_attachment", label: "رفع مرفق وثيقة", description: "رفع ملف مرفق بوثيقة في الأرشيف (صورة أو PDF)", example: "المشرف يرفع صورة الكتاب الأصلي", category: "correspondence" },
-  { key: "import_correspondence_excel", label: "استيراد وثائق من Excel", description: "استيراد قائمة وثائق من ملف Excel خارجي للأرشيف", example: "المشرف يستورد 50 وثيقة من ملف Excel", category: "correspondence" },
-  { key: "export_correspondence", label: "تصدير بيانات الأرشيف", description: "تصدير بيانات الوثائق إلى Excel", example: "المشرف يصدّر جميع وثائق الأرشيف لملف Excel", category: "correspondence" },
-  { key: "print_correspondence", label: "طباعة بيانات الأرشيف", description: "استخدام زر الطباعة في صفحة الأرشيف الإداري", example: "المشرف يطبع سجل الوثائق", category: "correspondence" },
-
-  // ─── الأرشيف الإداري ───
-  { key: "view_archive", label: "عرض الأرشيف الإداري", description: "الدخول لصفحة الأرشيف الإداري والبحث في الوثائق", example: "الموظف يبحث عن وثيقة صادرة في الأرشيف", category: "archive" },
-  { key: "add_archive", label: "إضافة وثيقة للأرشيف", description: "إضافة وثيقة جديدة للأرشيف الإداري", example: "المشرف يضيف كتاب وارد جديد للأرشيف", category: "archive" },
+  { key: "view_archive", label: "عرض الأرشيف الإداري", description: "الدخول لصفحة الأرشيف الإداري ورؤية الوثائق الرسمية والبحث فيها", example: "المشرف يرى الوثائق الواردة والصادرة في الأرشيف", category: "archive" },
+  { key: "add_archive", label: "إضافة وثيقة للأرشيف", description: "إضافة وثيقة جديدة للأرشيف الإداري (واردة أو صادرة)", example: "المشرف يضيف كتاب وارد جديد للأرشيف", category: "archive" },
   { key: "edit_archive", label: "تعديل وثيقة في الأرشيف", description: "تعديل بيانات وثيقة موجودة في الأرشيف", example: "المشرف يعدل رقم وثيقة بعد اكتشاف خطأ", category: "archive" },
   { key: "delete_archive", label: "حذف وثيقة من الأرشيف", description: "حذف وثيقة من الأرشيف الإداري (فقط المدراء)", example: "المدير يحذف وثيقة مكررة", category: "archive" },
-  { key: "export_archive", label: "تصدير بيانات الأرشيف", description: "تصدير بيانات الوثائق إلى Excel", example: "المشرف يصدّر جميع وثائق العام الحالي", category: "archive" },
+  { key: "upload_archive_attachment", label: "رفع مرفق وثيقة", description: "رفع ملف مرفق بوثيقة في الأرشيف (صورة أو PDF)", example: "المشرف يرفع صورة الكتاب الأصلي", category: "archive" },
+  { key: "import_archive_excel", label: "استيراد وثائق من Excel", description: "استيراد قائمة وثائق من ملف Excel خارجي للأرشيف", example: "المشرف يستورد 50 وثيقة من ملف Excel", category: "archive" },
+  { key: "export_archive", label: "تصدير بيانات الأرشيف", description: "تصدير بيانات الوثائق إلى Excel", example: "المشرف يصدّر جميع وثائق الأرشيف لملف Excel", category: "archive" },
+  { key: "print_archive", label: "طباعة بيانات الأرشيف", description: "استخدام زر الطباعة في صفحة الأرشيف الإداري", example: "المشرف يطبع سجل الوثائق", category: "archive" },
 
   // ─── التنفيذ التدريبي ───
   { key: "view_courses", label: "عرض صفحة الدورات", description: "الدخول لصفحة الدورات التدريبية ورؤية تفاصيلها", example: "المشرف يرى قائمة الدورات النشطة والمخططة", category: "courses" },
@@ -186,14 +180,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "view_activity_log",
   ],
   trainer: [
-    "view_dashboard", "view_tasks_section", "print_dashboard",
-    "view_hr", "create_leave_request", "cancel_own_request",
-    "view_tasks", "start_task", "complete_task",
-    "view_courses",
-    "view_training_plan",
-    "record_followup",
     "view_dashboard", "view_tasks_section", "view_attendance_section", "print_dashboard",
-    "view_hr", "view_daily_situation", "create_leave_request",
+    "view_hr", "view_daily_situation", "create_leave_request", "cancel_own_request",
     "view_tasks", "start_task", "complete_task",
     "view_courses",
     "view_training_plan",

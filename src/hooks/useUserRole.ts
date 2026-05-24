@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getEffectivePermissions, hasPermission as checkPerm } from "@/lib/permissions";
 import { useMemo } from "react";
 
-export type UserPersona = "admin" | "dept_manager" | "prep_unit_head" | "curriculum_unit_head" | "individual";
+export type UserPersona = "admin" | "dept_manager" | "unit_head" | "prep_unit_head" | "curriculum_unit_head" | "individual";
 
 export const useUserRole = () => {
   const { user } = useAuth();
@@ -28,7 +28,7 @@ export const useUserRole = () => {
     } else if (section.includes("ناهج") || section.includes("مناهج")) {
       persona = "curriculum_unit_head";
     } else {
-      persona = "individual";
+      persona = "unit_head";
     }
   }
 

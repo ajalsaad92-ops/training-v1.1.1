@@ -76,7 +76,7 @@ const MONTHLY_TIME_HOURS = 7;
 // ============ MANAGER DASHBOARD ============
 const ManagerDashboard = () => {
   const navigate = useNavigate();
-  const { has } = useUserRole();
+  const { has, userId, userName } = useUserRole();
   const { data: employees } = useEmployees();
   const { data: courses } = useCourses();
   const { data: hrRequests, refetch: refetchHR } = useHRRequests();
@@ -125,8 +125,19 @@ const ManagerDashboard = () => {
   const dailyCount = employees.filter(e => e.work_schedule === "daily").length;
   const shiftCount = employees.filter(e => e.work_schedule !== "daily").length;
 
+  const makeHistory = (req: typeof hrRequests[0], kind: string, action: string) => {
+    const prev: any[] = Array.isArray(req?.history) ? req.history : [];
+    return [...prev, { id: `h_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, at: new Date().toISOString(), by_id: userId, by_name: userName, kind, action }];
+  };
+
   const handleHRAction = (id: string, action: "approve" | "reject") => {
-    localDb.hrRequests.update(id, { approval_status: action === "approve" ? "approved" : "rejected" });
+    const req = hrRequests.find(r => r.id === id);
+    const history = makeHistory(req, action === "approve" ? "approval" : "rejection", action === "approve" ? "موافقة نهائية من مدير القسم" : "رفض مدير القسم");
+    if (action === "approve") {
+      localDb.hrRequests.update(id, { approval_status: "approved", dept_manager_status: "approved", dept_manager_by: userId, dept_manager_at: new Date().toISOString(), history });
+    } else {
+      localDb.hrRequests.update(id, { approval_status: "rejected", dept_manager_status: "rejected", dept_manager_by: userId, dept_manager_at: new Date().toISOString(), history });
+    }
     toast({ title: action === "approve" ? "تمت الموافقة" : "تم الرفض" });
     refetchHR();
   };
@@ -282,7 +293,7 @@ const ManagerDashboard = () => {
 // ============ PREP DASHBOARD ============
 const PrepDashboard = () => {
   const navigate = useNavigate();
-  const { has } = useUserRole();
+  const { has, userId, userName } = useUserRole();
   const { data: employees } = useEmployees();
   const { data: hrRequests, refetch: refetchHR } = useHRRequests();
   const { data: tasks } = useTasks();
@@ -313,8 +324,25 @@ const PrepDashboard = () => {
   const timeUsage: Record<string, number> = {};
   onTimeOff.forEach(r => { timeUsage[r.employee_name] = (timeUsage[r.employee_name] || 0) + 1; });
 
-  const handleUnitApprove = (id: string) => { localDb.hrRequests.update(id, { approval_status: "unit_approved", unit_head_status: "approved" }); toast({ title: "موافقة رئيس الشعبة" }); refetchHR(); };
-  const handleReject = (id: string) => { localDb.hrRequests.update(id, { approval_status: "rejected", unit_head_status: "rejected" }); toast({ title: "تم الرفض" }); refetchHR(); };
+  const makeHistory = (req: typeof hrRequests[0], kind: string, action: string) => {
+    const prev: any[] = Array.isArray(req?.history) ? req.history : [];
+    return [...prev, { id: `h_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, at: new Date().toISOString(), by_id: userId, by_name: userName, kind, action }];
+  };
+
+  const handleUnitApprove = (id: string) => {
+    const req = hrRequests.find(r => r.id === id);
+    const history = makeHistory(req, "approval", "موافقة رئيس الشعبة");
+    localDb.hrRequests.update(id, { approval_status: "unit_approved", unit_head_status: "approved", unit_head_by: userId, unit_head_at: new Date().toISOString(), history });
+    toast({ title: "موافقة رئيس الشعبة" });
+    refetchHR();
+  };
+  const handleReject = (id: string) => {
+    const req = hrRequests.find(r => r.id === id);
+    const history = makeHistory(req, "rejection", "رفض رئيس الشعبة");
+    localDb.hrRequests.update(id, { approval_status: "rejected", unit_head_status: "rejected", unit_head_by: userId, unit_head_at: new Date().toISOString(), history });
+    toast({ title: "تم الرفض" });
+    refetchHR();
+  };
 
   return (
     <div className="space-y-4">
@@ -555,7 +583,7 @@ const Dashboard = () => {
       <PageHeader title="لوحة التحكم" subtitle={`مرحباً ${user.name} — ${user.position}`} icon={LayoutDashboard} sections={dashboardSections} />
       <div className="flex-1 overflow-y-auto min-h-0">
         {persona === "admin" || persona === "dept_manager" ? <ManagerDashboard />
-          : persona === "prep_unit_head" ? <PrepDashboard />
+          : persona === "prep_unit_head" || persona === "unit_head" ? <PrepDashboard />
           : persona === "curriculum_unit_head" ? <CurriculumDashboard />
           : <IndividualDashboard />}
       </div>

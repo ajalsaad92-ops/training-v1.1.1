@@ -366,6 +366,7 @@ const HRAttendance = () => {
     }
 
     const isSubmitterManager = (isDeptManager || isAdmin) && has("manager_override_hr");
+    const isOwnRequest = leaveForm.employee_name === userName;
     const insertPayload: Record<string, unknown> = {
       employee_name: leaveForm.employee_name,
       type: leaveForm.type,
@@ -375,7 +376,7 @@ const HRAttendance = () => {
       hours: leaveForm.type === "خروجية" ? leaveForm.hours : null,
       created_by: userId,
     };
-    if (isSubmitterManager) {
+    if (isSubmitterManager && !isOwnRequest) {
       insertPayload.unit_head_status = "approved";
       insertPayload.unit_head_by = userId;
       insertPayload.unit_head_at = new Date().toISOString();
