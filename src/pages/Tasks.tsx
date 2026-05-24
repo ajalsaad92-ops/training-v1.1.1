@@ -912,7 +912,7 @@ const Tasks = () => {
                         {h.notes && <p className="text-muted-foreground mt-1">{h.notes}</p>}
                         
                         <div className="mt-2 flex items-center justify-between">
-                          <Badge variant={h.status === "approved" ? "success" : h.status === "rejected" ? "destructive" : "secondary"}>
+                          <Badge variant={h.status === "approved" ? "default" : h.status === "rejected" ? "destructive" : "secondary"}>
                             {h.status === "pending_acceptance" ? "بانتظار موافقة المستلم" : h.status === "pending_approval" ? "بانتظار موافقة المسؤول" : h.status === "approved" ? "تمت الإحالة" : h.status === "rejected" ? "مرفوضة" : "غير معروف"}
                           </Badge>
                           
@@ -985,7 +985,7 @@ const Tasks = () => {
                     <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                       {visibleComments.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-2">لا توجد تعليقات بعد</p>
-                      ) : visibleComments.map((c: { id: string; author_id: string; author_name: string; recipient_name?: string; message: string; created_at: string }) => {
+                      ) : visibleComments.map((c: { id: string; author_id: string; author_name: string; recipient_name?: string; message: string; created_at: string; is_hidden?: boolean }) => {
                         const mine = c.author_id === userId;
                         return (
                           <div key={c.id} className={`rounded-lg p-2.5 text-sm animate-slide-up ${mine ? "bg-primary/10 border border-primary/20" : "bg-muted/40 border border-border"}`}>

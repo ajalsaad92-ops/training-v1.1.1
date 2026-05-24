@@ -360,7 +360,7 @@ const HRAttendance = () => {
           setLeaveSaving(false);
           return;
         } else if (sectionOnLeave) {
-          toast({ title: "ملاحظة تعارض", description: `تم تجاوز التعارض لوجود صلاحية. (${sectionOnLeave.employee_name} مجاز)`, variant: "warning" });
+          toast({ title: "ملاحظة تعارض", description: `تم تجاوز التعارض لوجود صلاحية. (${sectionOnLeave.employee_name} مجاز)` });
         }
       }
     }
@@ -386,7 +386,7 @@ const HRAttendance = () => {
     await logAction(userName, "رفع طلب إجازة", leaveForm.employee_name);
     toast({ title: "تم", description: "تم رفع طلب الإجازة بنجاح" });
     setShowLeaveForm(false);
-    setLeaveForm({ employee_name: "", type: "إجازة اعتيادية", date: "", notes: "", department: "" });
+    setLeaveForm({ employee_name: "", type: "إجازة اعتيادية", date: "", notes: "", department: "", hours: "1" });
     refetch();
     setLeaveSaving(false);
   };
@@ -676,7 +676,7 @@ const HRAttendance = () => {
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="بحث بالاسم أو النوع..." className="ps-9" />
         </div>
         <Button size="sm" className="gap-2 animate-scale-in" onClick={() => {
-          setLeaveForm({ employee_name: isIndividual ? userName : "", type: "إجازة اعتيادية", date: new Date().toISOString().split("T")[0], notes: "", department: "" });
+          setLeaveForm({ employee_name: isIndividual ? userName : "", type: "إجازة اعتيادية", date: new Date().toISOString().split("T")[0], notes: "", department: "", hours: "1" });
           setShowLeaveForm(true);
         }}>
           <CalendarPlus className="w-4 h-4" />رفع طلب إجازة

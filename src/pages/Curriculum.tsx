@@ -579,7 +579,7 @@ const Curriculum = () => {
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="min-w-0 flex-1">
                           <h3 className="font-bold text-foreground text-sm truncate flex items-center gap-2">
-                            {item.privacy_level === "private" && <Lock className="w-3.5 h-3.5 text-warning" title="سري/خاص" />}
+                            {item.privacy_level === "private" && <span title="سري/خاص"><Lock className="w-3.5 h-3.5 text-warning" /></span>}
                             {item.title}
                           </h3>
                           <div className="flex items-center gap-1.5 mt-1">
