@@ -71,7 +71,7 @@ const HRAttendance = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedRequest, setSelectedRequest] = useState<HRRequest | null>(null);
   const [showLeaveForm, setShowLeaveForm] = useState(false);
-  const [leaveForm, setLeaveForm] = useState({ employee_name: "", type: "إجازة اعتيادية", date: "", notes: "", department: "", hours: "1" });
+  const [leaveForm, setLeaveForm] = useState({ employee_name: "", type: "إجازة اعتيادية", date: "", end_date: "", notes: "", department: "", hours: "1" });
   const [leaveSaving, setLeaveSaving] = useState(false);
   const [opinionDraft, setOpinionDraft] = useState<Record<string, string>>({});
   const [topCollapsed, setTopCollapsed] = useState(false);
@@ -393,27 +393,38 @@ const HRAttendance = () => {
 
     const isSubmitterManager = (isDeptManager || isAdmin) && has("manager_override_hr");
     const isOwnRequest = leaveForm.employee_name === userName;
-    const insertPayload: Record<string, unknown> = {
-      employee_name: leaveForm.employee_name,
-      type: leaveForm.type,
-      date: leaveForm.date,
-      notes: leaveForm.notes,
-      department: leaveForm.department,
-      hours: leaveForm.type === "خروجية" ? leaveForm.hours : null,
-      created_by: userId,
-    };
-    if (isSubmitterManager && !isOwnRequest) {
-      insertPayload.unit_head_status = "approved";
-      insertPayload.unit_head_by = userId;
-      insertPayload.unit_head_at = new Date().toISOString();
-      insertPayload.approval_status = "unit_approved";
+    const dates: string[] = [];
+    if (leaveForm.end_date && leaveForm.end_date !== leaveForm.date) {
+      const start = new Date(leaveForm.date);
+      const end = new Date(leaveForm.end_date);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        dates.push(d.toISOString().split("T")[0]);
+      }
+    } else {
+      dates.push(leaveForm.date);
     }
-
-    localDb.hrRequests.insert(insertPayload);
-    await logAction(userName, "رفع طلب إجازة", leaveForm.employee_name);
-    toast({ title: "تم", description: "تم رفع طلب الإجازة بنجاح" });
+    for (const dateStr of dates) {
+      const insertPayload: Record<string, unknown> = {
+        employee_name: leaveForm.employee_name,
+        type: leaveForm.type,
+        date: dateStr,
+        notes: leaveForm.notes,
+        department: leaveForm.department,
+        hours: leaveForm.type === "خروجية" ? leaveForm.hours : null,
+        created_by: userId,
+      };
+      if (isSubmitterManager && !isOwnRequest) {
+        insertPayload.unit_head_status = "approved";
+        insertPayload.unit_head_by = userId;
+        insertPayload.unit_head_at = new Date().toISOString();
+        insertPayload.approval_status = "unit_approved";
+      }
+      localDb.hrRequests.insert(insertPayload);
+    }
+    await logAction(userName, "رفع طلب إجازة", `${leaveForm.employee_name} (${dates.length > 1 ? `${dates.length} أيام` : leaveForm.date})`);
+    toast({ title: "تم", description: `تم رفع طلب الإجازة بنجاح${dates.length > 1 ? ` (${dates.length} أيام)` : ""}` });
     setShowLeaveForm(false);
-    setLeaveForm({ employee_name: "", type: "إجازة اعتيادية", date: "", notes: "", department: "", hours: "1" });
+    setLeaveForm({ employee_name: "", type: "إجازة اعتيادية", date: "", end_date: "", notes: "", department: "", hours: "1" });
     refetch();
     setLeaveSaving(false);
   };
@@ -948,9 +959,20 @@ const HRAttendance = () => {
                 </Select>
               </div>
               <div>
-                <Label>التاريخ</Label>
+                <Label>تاريخ البداية</Label>
                 <Input type="date" value={leaveForm.date} onChange={(e) => setLeaveForm({ ...leaveForm, date: e.target.value })} />
               </div>
+              {leaveForm.type !== "خروجية" && (
+                <div>
+                  <Label>تاريخ النهاية (اختياري)</Label>
+                  <Input type="date" value={leaveForm.end_date} min={leaveForm.date} onChange={(e) => setLeaveForm({ ...leaveForm, end_date: e.target.value })} />
+                  {leaveForm.end_date && leaveForm.end_date !== leaveForm.date && (
+                    <p className="text-[10px] text-primary mt-1">
+                      {Math.ceil((new Date(leaveForm.end_date).getTime() - new Date(leaveForm.date).getTime()) / (1000 * 60 * 60 * 24)) + 1} يوم
+                    </p>
+                  )}
+                </div>
+              )}
               {leaveForm.type === "خروجية" && (
                 <div>
                   <Label>عدد الساعات</Label>

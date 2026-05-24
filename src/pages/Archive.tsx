@@ -2,6 +2,7 @@
 import { localDb } from "@/lib/localStore";
 import type { ArchiveDocument, ArchiveDocType, ArchivePart, ArchiveSection, ArchiveYear } from "@/lib/localStore";
 import { useUserRole } from "@/hooks/useUserRole";
+import { FileList, FileUploadButton } from "@/components/FileManager";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import PageHeader from "@/components/PageHeader";
@@ -1112,6 +1113,12 @@ const Archive = () => {
                     <p className="text-[10px] text-muted-foreground">تاريخ الإضافة</p>
                     <p className="text-xs font-medium text-foreground">{selectedDoc.dateOfAdd ? new Date(selectedDoc.dateOfAdd).toLocaleDateString("ar-SA") : "—"}</p>
                   </div>
+                </div>
+
+                <div className="border-t border-border pt-3">
+                  <p className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-primary" />المرفقات</p>
+                  <FileList entityKey={`archive_${selectedDoc.id}`} showDelete={has("delete_archive")} />
+                  {has("upload_archive_attachment") && <FileUploadButton entityKey={`archive_${selectedDoc.id}`} onUpload={() => {}} label="رفع مرفق" />}
                 </div>
 
                 <div className="flex gap-2 pt-3 border-t border-border">

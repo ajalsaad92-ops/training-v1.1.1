@@ -2,6 +2,8 @@
 import { useSearchParams } from "react-router-dom";
 import { useTasks, useTaskHandovers, useEmployees, useTaskComments } from "@/hooks/useSupabaseData";
 import { useUserRole } from "@/hooks/useUserRole";
+import { fileStore } from "@/lib/fileStore";
+import { FileList, FileUploadButton } from "@/components/FileManager";
 import { localDb } from "@/lib/localStore";
 import { logAction } from "@/lib/auditLog";
 import StatusBadge from "@/components/StatusBadge";
@@ -43,6 +45,7 @@ const statusLabels: Record<string, string> = {
   handed_over: "تم التسليم",
   approved: "معتمد",
   proposed: "مقترح بين الشعب",
+  rejected: "مرفوض",
 };
 
 const curriculumStages = ["writing", "new_form", "auditing", "printing"];
@@ -71,9 +74,11 @@ const PIPELINE_STAGES = [
 const FILTER_CHIPS = [
   { key: "all", label: "الكل" },
   { key: "pending", label: "معلق" },
+  { key: "proposed", label: "مقترح" },
   { key: "in_progress", label: "قيد التنفيذ" },
   { key: "review", label: "مراجعة" },
   { key: "completed", label: "منجز" },
+  { key: "rejected", label: "مرفوض" },
   { key: "الإعداد", label: "الإعداد" },
   { key: "المناهج", label: "المناهج" },
 ];
@@ -122,6 +127,7 @@ const Tasks = () => {
   const [threadRecipient, setThreadRecipient] = useState("");
   const [isHiddenComment, setIsHiddenComment] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachmentFileId, setAttachmentFileId] = useState<string | null>(null);
   const [activeChip, setActiveChip] = useState("all");
   const [filterStage, setFilterStage] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "board" | "gantt">("list");
@@ -358,6 +364,41 @@ const Tasks = () => {
     refetch();
   };
 
+  const handleApproveProposal = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    if (!(isManager || isAdmin)) {
+      toast({ title: "خطأ", description: "فقط رئيس القسم يمكنه قبول المقترحات", variant: "destructive" });
+      return;
+    }
+    localDb.tasks.update(taskId, { status: "pending" });
+    await logAction(userName, "قبول مقترح مهمة", task.title);
+    toast({ title: "تم", description: "تم قبول المقترح وتحويل المهمة إلى معلقة" });
+    if (task.assigned_to) {
+      localDb.notifications.insert({ user_id: task.assigned_to, message: `تم قبول مقترح المهمة: ${task.title}`, type: "info", link: `/tasks?focus=${taskId}` });
+    }
+    if (task.created_by) {
+      localDb.notifications.insert({ user_id: task.created_by, message: `تم قبول مقترح مهمتك: ${task.title}`, type: "info", link: `/tasks?focus=${taskId}` });
+    }
+    refetch();
+  };
+
+  const handleRejectProposal = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    if (!(isManager || isAdmin)) {
+      toast({ title: "خطأ", description: "فقط رئيس القسم يمكنه رفض المقترحات", variant: "destructive" });
+      return;
+    }
+    localDb.tasks.update(taskId, { status: "rejected" });
+    await logAction(userName, "رفض مقترح مهمة", task.title);
+    toast({ title: "تم", description: "تم رفض المقترح" });
+    if (task.created_by) {
+      localDb.notifications.insert({ user_id: task.created_by, message: `تم رفض مقترح مهمتك: ${task.title}`, type: "warning", link: `/tasks?focus=${taskId}` });
+    }
+    refetch();
+  };
+
   const handleSendComment = async (taskId: string) => {
     if (!commentText.trim()) {
       toast({ title: "خطأ", description: "اكتب ملاحظة أولاً", variant: "destructive" });
@@ -395,7 +436,7 @@ const Tasks = () => {
       author_name: userName,
       recipient_id: recipientId,
       recipient_name: recipient?.name || "",
-      message: threadText.trim() + (attachment ? `\n📎 مرفق: ${attachment.name}` : ""),
+      message: threadText.trim() + (attachmentFileId ? `\n📎 مرفق (معرّف: ${attachmentFileId})` : ""),
       is_hidden: isHiddenComment,
     });
     if (recipientId) {
@@ -411,6 +452,7 @@ const Tasks = () => {
     setThreadRecipient("");
     setIsHiddenComment(false);
     setAttachment(null);
+    setAttachmentFileId(null);
     refetchComments();
     toast({ title: "تم", description: isHiddenComment ? "تم إرسال التعليق (مخفي)" : "تم إرسال التعليق" });
   };
@@ -468,6 +510,12 @@ const Tasks = () => {
         }
         btns.push(<button key="done" onClick={() => handleMarkCompleted(task.id)} className="p-1.5 rounded-md bg-success/10 text-success hover:bg-success/20 text-xs flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />إنهاء</button>);
       }
+    }
+    if (task.status === "proposed" && (isManager || isAdmin)) {
+      btns.push(
+        <button key="accept_proposal" onClick={() => handleApproveProposal(task.id)} className="p-1.5 rounded-md bg-success/10 text-success hover:bg-success/20 text-xs flex items-center gap-1"><Check className="w-3 h-3" />قبول</button>,
+        <button key="reject_proposal" onClick={() => handleRejectProposal(task.id)} className="p-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs flex items-center gap-1"><X className="w-3 h-3" />رفض</button>
+      );
     }
     if ((isUnitHead || isManager || isAdmin) && task.status === "review") {
       btns.push(
@@ -899,6 +947,12 @@ const Tasks = () => {
                 </div>
               )}
 
+              <div className="border-t border-border pt-3">
+                <p className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5"><Paperclip className="w-3.5 h-3.5 text-primary" />المرفقات</p>
+                <FileList entityKey={`task_${selectedTask.id}`} showDelete={canEditTask(selectedTask)} />
+                <FileUploadButton entityKey={`task_${selectedTask.id}`} onUpload={() => refetch()} label="إرفاق ملف" />
+              </div>
+
               {!selectedTask.is_routine && (
                 <div className="border-t border-border pt-3">
                   <p className="text-xs font-bold text-foreground mb-3">مسار المهمة</p>
@@ -1045,11 +1099,18 @@ const Tasks = () => {
                         <div className="relative">
                           <Textarea value={threadText} onChange={e => setThreadText(e.target.value)} placeholder="اكتب تعليقاً..." rows={2} className="pb-10" />
                           <div className="absolute bottom-2 right-2 flex items-center gap-2">
-                            <label className="cursor-pointer p-1.5 bg-muted rounded-md hover:bg-muted/80 transition-colors" title="إرفاق ملف">
-                               <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
-                               <input type="file" className="hidden" onChange={e => setAttachment(e.target.files?.[0] || null)} />
-                            </label>
-                            {attachment && <span className="text-[10px] text-primary truncate max-w-[150px]">{attachment.name}</span>}
+                             <label className="cursor-pointer p-1.5 bg-muted rounded-md hover:bg-muted/80 transition-colors" title="إرفاق ملف">
+                                <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+                                <input type="file" className="hidden" onChange={async e => {
+                                  const f = e.target.files?.[0] || null;
+                                  setAttachment(f);
+                                  if (f) {
+                                    const stored = await fileStore.save(`task_comment_${showDetail}`, f, userId);
+                                    setAttachmentFileId(stored.id);
+                                  }
+                                }} />
+                             </label>
+                             {attachment && <span className="text-[10px] text-primary truncate max-w-[150px]">{attachment.name}</span>}
                           </div>
                         </div>
                         {(isManager || isAdmin || isUnitHead) && (

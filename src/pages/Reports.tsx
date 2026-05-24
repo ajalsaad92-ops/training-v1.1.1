@@ -125,7 +125,7 @@ const Reports = () => {
     [source, columns, dateFrom, dateTo, search, refreshRef.current]
   );
 
-  const exec = useMemo(() => computeExecutiveKPIs(), []);
+  const exec = useMemo(() => computeExecutiveKPIs(), [refreshRef.current]);
 
   const toggleCol = (k: string) =>
     setColumns((c) => (c.includes(k) ? c.filter((x) => x !== k) : [...c, k]));

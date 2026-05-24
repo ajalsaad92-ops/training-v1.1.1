@@ -64,9 +64,27 @@ const Settings = () => {
   const handleResetData = () => {
     const input = prompt("اكتب 'إعادة تعيين' لتأكيد حذف جميع البيانات:");
     if (input !== "إعادة تعيين") return;
+    const allData = {
+      employees: localDb.employees.getAll(),
+      courses: localDb.courses.getAll(),
+      trainees: localDb.trainees.getAll(),
+      hrRequests: localDb.hrRequests.getAll(),
+      curriculumItems: localDb.curriculumItems.getAll(),
+      correspondence: localDb.correspondence.getAll(),
+      tasks: localDb.tasks.getAll(),
+      profiles: localDb.profiles.getAll(),
+      exportDate: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tms-auto-backup-before-reset-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
     localStorage.removeItem("tms_local_store");
     localStorage.removeItem("tms_custom_permissions");
-    toast({ title: "تم إعادة التعيين" });
+    toast({ title: "تم إعادة التعيين", description: "تم حفظ نسخة احتياطية تلقائياً قبل المسح" });
     setTimeout(() => window.location.reload(), 500);
   };
 
@@ -125,9 +143,29 @@ const GeneralTab = ({ backupDone, onBackup, onReset }: { backupDone: boolean; on
           </div>
         )}
         <div className="bg-card rounded-lg border border-border p-4">
-          <h3 className="font-bold text-sm text-foreground mb-2 flex items-center gap-2"><FileSpreadsheet className="w-4 h-4 text-accent" />استيراد</h3>
-          <p className="text-xs text-muted-foreground mb-3">محاكاة استيراد بيانات من Excel</p>
-          <Button variant="outline" size="sm" className="gap-1.5"><Upload className="w-3.5 h-3.5" />محاكاة</Button>
+          <h3 className="font-bold text-sm text-foreground mb-2 flex items-center gap-2"><FileSpreadsheet className="w-4 h-4 text-accent" />استعادة نسخة احتياطية</h3>
+          <p className="text-xs text-muted-foreground mb-3">استعادة بيانات من ملف نسخة احتياطية سابق</p>
+          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20">
+            <Upload className="w-3.5 h-3.5" />استعادة
+            <input type="file" accept=".json" className="hidden" onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = (ev) => {
+                try {
+                  const data = JSON.parse(ev.target?.result as string);
+                  if (!data.exportDate) throw new Error("ملف غير صالح");
+                  localStorage.setItem("tms_local_store", JSON.stringify(data));
+                  toast({ title: "تم", description: "تمت استعادة البيانات — سيتم إعادة تحميل الصفحة" });
+                  setTimeout(() => window.location.reload(), 1000);
+                } catch (err) {
+                  toast({ title: "خطأ", description: "ملف النسخة الاحتياطية غير صالح", variant: "destructive" });
+                }
+              };
+              reader.readAsText(file);
+              e.target.value = "";
+            }} />
+          </label>
         </div>
       </div>
 
@@ -160,7 +198,7 @@ const GeneralTab = ({ backupDone, onBackup, onReset }: { backupDone: boolean; on
 const UsersTab = () => {
   const [users, setUsers] = useState<Array<UserProfile & { email?: string }>>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "", name: "", section: "شعبة الإعداد والتدريب", position: "موظف", phone: "" });
+  const [form, setForm] = useState({ email: "", password: "", name: "", section: "", position: "موظف", phone: "" });
   const [saving, setSaving] = useState(false);
   const { has, isAdmin } = useUserRole();
   const { impersonate } = useAuth();
@@ -188,7 +226,7 @@ const UsersTab = () => {
     localDb.userAccounts.insert({ email: form.email, password: form.password, profile });
     toast({ title: "تم", description: "تم إنشاء المستخدم" });
     setShowAdd(false);
-    setForm({ email: "", password: "", name: "", section: "شعبة الإعداد والتدريب", position: "موظف", phone: "" });
+    setForm({ email: "", password: "", name: "", section: "", position: "موظف", phone: "" });
     refresh();
     setSaving(false);
   };
@@ -241,6 +279,9 @@ const UsersTab = () => {
             <Select value={form.section} onValueChange={v => setForm({ ...form, section: v })}>
               <SelectTrigger><SelectValue placeholder="الشعبة" /></SelectTrigger>
               <SelectContent>
+                {[...new Set(localDb.employees.getAll().map((e: any) => e.section).filter(Boolean))].map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
                 <SelectItem value="شعبة الإعداد والتدريب">شعبة الإعداد والتدريب</SelectItem>
                 <SelectItem value="شعبة المناهج">شعبة المناهج</SelectItem>
               </SelectContent>

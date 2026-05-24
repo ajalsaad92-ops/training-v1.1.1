@@ -192,8 +192,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "view_dashboard", "view_attendance_section", "view_pending_requests_section", "view_tasks_section", "print_dashboard",
     "view_hr", "view_daily_situation", "create_leave_request", "cancel_own_request", "export_hr", "print_hr",
     "view_tasks", "start_task", "complete_task", "export_tasks", "print_tasks",
-    "view_training_plan",
-    "record_followup",
+    "view_curriculum", "view_archive", "view_courses",
+    "view_training_plan", "view_evaluation", "view_reports", "record_followup",
   ],
 };
 

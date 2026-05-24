@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GraduationCap, MapPin, Calendar, User, Eye, DollarSign, Award, QrCode, Plus, Search, Loader2, Pencil, Trash2, ClipboardList, PlayCircle, CheckCircle, Users, TrendingUp, ChevronLeft } from "lucide-react";
+import { GraduationCap, MapPin, Calendar, User, Eye, DollarSign, Award, QrCode, Plus, Search, Loader2, Pencil, Trash2, ClipboardList, PlayCircle, CheckCircle, Users, TrendingUp, ChevronLeft, UserMinus, UserPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
@@ -161,6 +161,50 @@ const Courses = () => {
         trainees: (selectedCourse.trainees || []).map((t) => t.id === traineeId ? { ...t, status: newStatus } : t),
       });
     }
+    refetch();
+  };
+
+  const handleAddTrainee = async () => {
+    if (!has("add_course")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية إضافة متدرب", variant: "destructive" });
+      return;
+    }
+    if (!selectedCourse) return;
+    const name = prompt("اسم المتدرب:");
+    if (!name?.trim()) return;
+    const emp = employees.find((e: any) => e.name === name.trim());
+    const traineeId = localDb.trainees.insert({
+      name: name.trim(),
+      course_id: selectedCourse.id,
+      employee_id: emp?.id || null,
+      status: "waiting",
+    });
+    if (selectedCourse) {
+      setSelectedCourse({
+        ...selectedCourse,
+        trainees: [...(selectedCourse.trainees || []), { id: traineeId, name: name.trim(), employee_id: emp?.id || null, status: "waiting", course_id: selectedCourse.id }],
+      });
+    }
+    await logAction(user?.name || "مستخدم", "إضافة متدرب", `${name.trim()} → ${selectedCourse.title}`);
+    toast({ title: "تم", description: "تمت إضافة المتدرب" });
+    refetch();
+  };
+
+  const handleRemoveTrainee = async (traineeId: string, traineeName: string) => {
+    if (!has("delete_course")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية حذف متدرب", variant: "destructive" });
+      return;
+    }
+    if (!confirm(`حذف المتدرب ${traineeName}؟`)) return;
+    localDb.trainees.delete(traineeId);
+    if (selectedCourse) {
+      setSelectedCourse({
+        ...selectedCourse,
+        trainees: (selectedCourse.trainees || []).filter((t: any) => t.id !== traineeId),
+      });
+    }
+    await logAction(user?.name || "مستخدم", "حذف متدرب", `${traineeName}`);
+    toast({ title: "تم", description: "تم حذف المتدرب" });
     refetch();
   };
 
@@ -568,7 +612,9 @@ const Courses = () => {
               </div>
 
               <div>
-                <h4 className="font-bold text-foreground mb-3 flex items-center gap-2"><User className="w-4 h-4 text-primary" />المتدربون ({(selectedCourse.trainees || []).length})</h4>
+                <h4 className="font-bold text-foreground mb-3 flex items-center gap-2"><User className="w-4 h-4 text-primary" />المتدربون ({(selectedCourse.trainees || []).length})
+                  {has("add_course") && <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 mr-auto" onClick={handleAddTrainee}><UserPlus className="w-3 h-3" />إضافة</Button>}
+                </h4>
                 {(selectedCourse.trainees || []).length > 0 ? (
                   <div className="space-y-2">
                     {(selectedCourse.trainees || []).map((trainee) => (
@@ -589,6 +635,9 @@ const Courses = () => {
                           )}
                           {trainee.status === "passed" && (
                             <button onClick={() => setShowCertificate(trainee.name)} className="p-1.5 rounded-md bg-accent/10 text-accent hover:bg-accent/20 transition-colors"><Award className="w-3.5 h-3.5" /></button>
+                          )}
+                          {has("delete_course") && (
+                            <button onClick={() => handleRemoveTrainee(trainee.id, trainee.name)} className="p-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="حذف"><UserMinus className="w-3.5 h-3.5" /></button>
                           )}
                         </div>
                       </div>

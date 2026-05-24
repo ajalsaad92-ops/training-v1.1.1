@@ -3,6 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import { useCurriculumItems, useEmployees, CurriculumItem } from "@/hooks/useSupabaseData";
 import { useUserRole } from "@/hooks/useUserRole";
 import { localDb } from "@/lib/localStore";
+import { fileStore } from "@/lib/fileStore";
+import { FileUploadButton, FileList } from "@/components/FileManager";
+import { localDb } from "@/lib/localStore";
 import { logAction } from "@/lib/auditLog";
 import StatusBadge from "@/components/StatusBadge";
 import PageHeader from "@/components/PageHeader";
@@ -204,29 +207,49 @@ const Curriculum = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     const ext = file.name.split(".").pop()?.toLowerCase();
-    if (!["pdf", "pptx", "ppt"].includes(ext || "")) {
-      toast({ title: "خطأ", description: "يُسمح فقط بملفات PDF أو PPT", variant: "destructive" });
+    if (!["pdf", "pptx", "ppt", "doc", "docx"].includes(ext || "")) {
+      toast({ title: "خطأ", description: "يُسمح فقط بملفات PDF أو PPT أو Word", variant: "destructive" });
       return;
     }
-    localDb.curriculumItems.update(id, {
-      file_url: `local://${file.name}`,
-      file_type: ext === "pdf" ? "pdf" : "ppt",
-      report_uploaded: true,
-    });
-    await logAction(userName, "رفع ملف منهج", `${id}`);
-    toast({ title: "تم", description: "تم رفع الملف بنجاح" });
+    try {
+      const stored = await fileStore.save(`curriculum_${id}`, file, userId);
+      localDb.curriculumItems.update(id, {
+        file_url: stored.id,
+        file_type: ext === "pdf" ? "pdf" : ext === "doc" || ext === "docx" ? "doc" : "ppt",
+        report_uploaded: true,
+      });
+      await logAction(userName, "رفع ملف منهج", file.name);
+      toast({ title: "تم", description: "تم رفع الملف بنجاح" });
+    } catch (err) {
+      toast({ title: "خطأ", description: "فشل رفع الملف", variant: "destructive" });
+    }
     setUploadingFile(null);
     refetch();
   };
 
-  const handleUploadPresentation = async (id: string) => {
+  const handleUploadPresentation = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
     if (!has("upload_presentation")) {
       toast({ title: "خطأ", description: "ليس لديك صلاحية رفع عرض تقديمي", variant: "destructive" });
       return;
     }
-    localDb.curriculumItems.update(id, { presentation_uploaded: true });
-    await logAction(userName, "رفع عرض تقديمي", `${id}`);
-    toast({ title: "تم", description: "تم رفع العرض التقديمي" });
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (!["pptx", "ppt", "pdf"].includes(ext || "")) {
+      toast({ title: "خطأ", description: "يُسمح فقط بملفات PPT أو PDF", variant: "destructive" });
+      return;
+    }
+    try {
+      const stored = await fileStore.save(`curriculum_ppt_${id}`, file, userId);
+      localDb.curriculumItems.update(id, {
+        presentation_uploaded: true,
+        presentation_file_id: stored.id,
+      });
+      await logAction(userName, "رفع عرض تقديمي", file.name);
+      toast({ title: "تم", description: "تم رفع العرض التقديمي بنجاح" });
+    } catch (err) {
+      toast({ title: "خطأ", description: "فشل رفع العرض", variant: "destructive" });
+    }
     refetch();
   };
 
@@ -637,18 +660,15 @@ const Curriculum = () => {
                             {item.report_uploaded ? (
                               <div className="flex items-center gap-1 text-success text-xs">
                                 <FileText className="w-3.5 h-3.5" />تقرير مرفوع
-                                {item.file_url && <a href={item.file_url} target="_blank" className="text-primary hover:underline mr-1">عرض</a>}
+                                {item.file_url && !item.file_url.startsWith("local://") && <FileList entityKey={`curriculum_${item.id}`} />}
                               </div>
                             ) : item.audit_status !== "not_started" ? (
-                              <div className="no-print">
-                                <input type="file" ref={fileInputRef} accept=".pdf,.ppt,.pptx" className="hidden" onChange={(e) => handleFileUpload(item.id, e)} />
-                                <button onClick={() => { setUploadingFile(item.id); fileInputRef.current?.click(); }} className="flex items-center gap-1 text-xs text-primary hover:underline"><Upload className="w-3.5 h-3.5" />{item.audit_status === "done" ? "النسخة النهائية" : "مسودة"}</button>
-                              </div>
+                              <span className="no-print"><FileUploadButton entityKey={`curriculum_${item.id}`} onUpload={(stored) => { localDb.curriculumItems.update(item.id, { file_url: stored.id, file_type: stored.filename.endsWith(".pdf") ? "pdf" : stored.filename.endsWith(".doc") || stored.filename.endsWith(".docx") ? "doc" : "ppt", report_uploaded: true }); refetch(); }} accept=".pdf,.ppt,.pptx,.doc,.docx" label={item.audit_status === "done" ? "النسخة النهائية" : "مسودة"} /></span>
                             ) : null}
                             {item.presentation_uploaded ? (
-                              <div className="flex items-center gap-1 text-success text-xs"><Presentation className="w-3.5 h-3.5" />عرض مرفوع</div>
+                              <div className="flex items-center gap-1 text-success text-xs"><Presentation className="w-3.5 h-3.5" />عرض مرفوع {item.presentation_file_id && <FileList entityKey={`curriculum_ppt_${item.id}`} />}</div>
                             ) : (
-                              <button onClick={() => handleUploadPresentation(item.id)} className="flex items-center gap-1 text-xs text-primary hover:underline no-print"><Upload className="w-3.5 h-3.5" />رفع عرض</button>
+                              <FileUploadButton entityKey={`curriculum_ppt_${item.id}`} onUpload={(stored) => { localDb.curriculumItems.update(item.id, { presentation_uploaded: true, presentation_file_id: stored.id }); refetch(); }} accept=".ppt,.pptx,.pdf" label="رفع عرض" />
                             )}
                           </div>
                         </div>
@@ -686,18 +706,15 @@ const Curriculum = () => {
                             {item.report_uploaded ? (
                               <div className="flex items-center gap-1 text-success text-xs">
                                 <FileText className="w-3.5 h-3.5" />مرفوع
-                                {item.file_url && <a href={item.file_url} target="_blank" className="text-primary hover:underline mr-1">عرض</a>}
+                                {item.file_url && !item.file_url.startsWith("local://") && <FileList entityKey={`curriculum_${item.id}`} />}
                               </div>
                             ) : (
                               item.audit_status !== "not_started" ? (
-                                <div className="no-print">
-                                  <input type="file" ref={fileInputRef} accept=".pdf,.ppt,.pptx" className="hidden" onChange={(e) => handleFileUpload(item.id, e)} />
-                                  <button onClick={() => { setUploadingFile(item.id); fileInputRef.current?.click(); }} className="flex items-center gap-1 text-xs text-primary hover:underline"><Upload className="w-3.5 h-3.5" />{item.audit_status === "done" ? "النسخة النهائية" : "مسودة"}</button>
-                                </div>
+                                <span className="no-print"><FileUploadButton entityKey={`curriculum_${item.id}`} onUpload={(stored) => { localDb.curriculumItems.update(item.id, { file_url: stored.id, file_type: stored.filename.endsWith(".pdf") ? "pdf" : stored.filename.endsWith(".doc") || stored.filename.endsWith(".docx") ? "doc" : "ppt", report_uploaded: true }); refetch(); }} accept=".pdf,.ppt,.pptx,.doc,.docx" label={item.audit_status === "done" ? "النسخة النهائية" : "مسودة"} /></span>
                               ) : <span className="text-xs text-muted-foreground">-</span>
                             )}
                           </td>
-                          <td>{item.presentation_uploaded ? <div className="flex items-center gap-1 text-success text-xs"><Presentation className="w-3.5 h-3.5" />مرفوع</div> : <span className="no-print"><button onClick={() => handleUploadPresentation(item.id)} className="flex items-center gap-1 text-xs text-primary hover:underline"><Upload className="w-3.5 h-3.5" />رفع</button></span>}</td>
+                          <td>{item.presentation_uploaded ? <div className="flex items-center gap-1 text-success text-xs"><Presentation className="w-3.5 h-3.5" />مرفوع {item.presentation_file_id && <FileList entityKey={`curriculum_ppt_${item.id}`} />}</div> : <span className="no-print"><FileUploadButton entityKey={`curriculum_ppt_${item.id}`} onUpload={(stored) => { localDb.curriculumItems.update(item.id, { presentation_uploaded: true, presentation_file_id: stored.id }); refetch(); }} accept=".ppt,.pptx,.pdf" label="رفع" /></span>}</td>
                           <td>{item.hard_copy_printed ? "نعم" : "لا"}</td>
                           <td><StatusBadge status={completion.label} variant={completion.variant} /></td>
                           {canEditCurriculum && <td className="no-print"><button onClick={() => openEdit(item)} className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20"><Pencil className="w-3.5 h-3.5" /></button></td>}
