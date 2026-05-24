@@ -1,4 +1,4 @@
-﻿import DailySituation from "@/components/DailySituation";
+import DailySituation from "@/components/DailySituation";
 import WeeklyShiftScheduler from "@/components/WeeklyShiftScheduler";
 import { useHRRequests, useEmployees, type HRRequest } from "@/hooks/useSupabaseData";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -429,6 +429,15 @@ const HRAttendance = () => {
         insertPayload.approval_status = "unit_approved";
       }
       localDb.hrRequests.insert(insertPayload);
+      if (!isSubmitterManager) {
+        const emp = employees.find(e => e.name === leaveForm.employee_name);
+        const empSec = emp?.section || "";
+        const s2u = (s: string) => s.includes("ناهج") ? "المناهج" : s.includes("داد") || s.includes("تدريب") ? "الإعداد" : s;
+        const unitHead = localDb.profiles.getAll().find((p: any) => p.roles?.some((r: string) => r.includes("unit_head")) && s2u(p.section || "") === s2u(empSec));
+        if (unitHead) {
+          localDb.notifications.insert({ user_id: unitHead.id, message: `طلب جديد: ${leaveForm.employee_name} (${leaveForm.type})`, type: "info", link: "/hr" });
+        }
+      }
     }
     await logAction(userName, "رفع طلب إجازة", `${leaveForm.employee_name} (${dates.length > 1 ? `${dates.length} أيام` : leaveForm.date})`);
     toast({ title: "تم", description: `تم رفع طلب الإجازة بنجاح${dates.length > 1 ? ` (${dates.length} أيام)` : ""}` });
@@ -461,6 +470,13 @@ const HRAttendance = () => {
     const history = appendHistory(req, { kind: "opinion_request", action: "طلب بيان رأي" });
     localDb.hrRequests.update(id, { opinion_requested: true, opinion_requested_by: userId, opinion_requested_at: new Date().toISOString(), history });
     if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `طُلب بيان رأي على طلبك (${req.type})`, type: "info", link: "/hr" });
+    const emp = employees.find(e => e.name === req.employee_name);
+    const empSec = emp?.section || "";
+    const s2u = (s: string) => s.includes("ناهج") ? "المناهج" : s.includes("داد") || s.includes("تدريب") ? "الإعداد" : s;
+    const unitHead = localDb.profiles.getAll().find((p: any) => p.roles?.some((r: string) => r.includes("unit_head")) && s2u(p.section || "") === s2u(empSec));
+    if (unitHead) {
+      localDb.notifications.insert({ user_id: unitHead.id, message: `مطلوب بيان رأيك بخصوص طلب إجازة: ${req.employee_name}`, type: "warning", link: "/hr" });
+    }
     await logAction(userName, "طلب بيان رأي", `طلب ${id}`);
     toast({ title: "تم", description: "تم إرسال طلب بيان الرأي إلى مسؤول الشعبة" });
     refetch();

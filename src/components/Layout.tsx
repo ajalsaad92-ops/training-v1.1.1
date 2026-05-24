@@ -1,4 +1,4 @@
-﻿import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/hooks/useSupabaseData";
 import { useUITheme } from "@/contexts/UIThemeContext";
@@ -242,7 +242,7 @@ const Layout = () => {
       </div>
 
       <main className="flex-1 min-w-0 overflow-y-auto relative flex flex-col pt-12 md:pt-0">
-        <div className="hidden md:block absolute top-3 end-3 z-30" ref={notifRef}>
+        <div className="hidden md:block fixed top-3 left-3 z-50" ref={notifRef}>
           <button onClick={() => setNotifOpen(!notifOpen)} className="relative p-2 rounded-lg bg-card border border-border hover:shadow-md transition-shadow">
             <Bell className="w-5 h-5 text-foreground" />
             {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold animate-pulse">{unreadCount}</span>}
