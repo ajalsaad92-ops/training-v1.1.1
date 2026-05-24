@@ -685,9 +685,9 @@ const Archive = () => {
                       <td className="font-medium text-foreground font-mono text-xs">{doc.docNum}</td>
                       <td className="text-muted-foreground text-xs">{doc.docDateCH}</td>
                       <td className="text-muted-foreground text-xs">{doc.docDateHig}</td>
-                      <td className="font-medium text-foreground max-w-[200px] truncate text-xs">{doc.docSubj}</td>
-                      <td className="text-muted-foreground text-xs max-w-[120px] truncate">{doc.docTo}</td>
-                      <td className="text-muted-foreground text-xs max-w-[120px] truncate">{doc.docSorse}</td>
+                      <td className="font-medium text-foreground  text-xs">{doc.docSubj}</td>
+                      <td className="text-muted-foreground text-xs ">{doc.docTo}</td>
+                      <td className="text-muted-foreground text-xs ">{doc.docSorse}</td>
                       <td className="text-muted-foreground text-xs">{doc.storedNum}</td>
                       <td>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium ${DOC_TYPE_COLORS[doc.docType] || "bg-muted text-muted-foreground"}`}>
@@ -697,7 +697,7 @@ const Archive = () => {
                           {DOC_TYPE_LABELS[doc.docType] || "—"}
                         </span>
                       </td>
-                      <td className="text-muted-foreground text-xs max-w-[120px] truncate">{partNameMap[doc.pId] || "—"}</td>
+                      <td className="text-muted-foreground text-xs ">{partNameMap[doc.pId] || "—"}</td>
                       <td className="no-print">
                         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                           <button onClick={() => setSelectedDoc(doc)} className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="عرض"><Eye className="w-3.5 h-3.5" /></button>
@@ -1011,7 +1011,7 @@ const Archive = () => {
             <Card>
               <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Clock className="w-4 h-4 text-primary" />أحدث الوثائق</CardTitle></CardHeader>
               <CardContent>
-                <div className="max-h-72 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto">
                   {recentDocs.map(doc => (
                     <TimelineItem key={doc.id} doc={doc} partNameMap={partNameMap} />
                   ))}

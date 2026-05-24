@@ -652,7 +652,7 @@ const Tasks = () => {
           {BOARD_COLUMNS.map(col => {
             const colTasks = boardGroups[col.key] || [];
             return (
-              <div key={col.key} className="min-w-[260px] flex-1 max-w-[320px]">
+              <div key={col.key} className="min-w-[260px] flex-1 ">
                 <div className="flex items-center justify-between mb-3 px-1">
                   <h3 className="text-sm font-bold text-foreground">{col.label}</h3>
                   <Badge variant="secondary" className="text-[10px]">{colTasks.length}</Badge>
