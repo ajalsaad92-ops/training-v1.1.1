@@ -46,6 +46,11 @@ const ProtectedRoute = ({ children, requireRole }: { children: JSX.Element, requ
   return children;
 };
 
+const PermissionRoute = ({ children, permission }: { children: JSX.Element, permission: boolean }) => {
+  if (permission === false) return <Navigate to="/" replace />;
+  return children;
+};
+
 const AppRoutes = () => {
   const { user, loading } = useAuth();
   const { has } = useUserRole();
@@ -80,16 +85,16 @@ const AppRoutes = () => {
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
         <Route path="settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
-        <Route path="curriculum" element={<ProtectedRoute requireRole={has("view_curriculum")}><Suspense fallback={<PageLoader />}><Curriculum /></Suspense></ProtectedRoute>} />
-        <Route path="activity-log" element={<ProtectedRoute requireRole={has("view_activity_log")}><Suspense fallback={<PageLoader />}><ActivityLog /></Suspense></ProtectedRoute>} />
-        <Route path="tasks" element={<ProtectedRoute requireRole={has("view_tasks")}><Suspense fallback={<PageLoader />}><Tasks /></Suspense></ProtectedRoute>} />
-        <Route path="hr" element={<ProtectedRoute requireRole={has("view_hr")}><Suspense fallback={<PageLoader />}><HRAttendance /></Suspense></ProtectedRoute>} />
+        <Route path="curriculum" element={<PermissionRoute permission={has("view_curriculum")}><Suspense fallback={<PageLoader />}><Curriculum /></Suspense></PermissionRoute>} />
+        <Route path="activity-log" element={<PermissionRoute permission={has("view_activity_log")}><Suspense fallback={<PageLoader />}><ActivityLog /></Suspense></PermissionRoute>} />
+        <Route path="tasks" element={<PermissionRoute permission={has("view_tasks")}><Suspense fallback={<PageLoader />}><Tasks /></Suspense></PermissionRoute>} />
+        <Route path="hr" element={<PermissionRoute permission={has("view_hr")}><Suspense fallback={<PageLoader />}><HRAttendance /></Suspense></PermissionRoute>} />
 
-        <Route path="courses" element={<ProtectedRoute requireRole={has("view_courses")}><Suspense fallback={<PageLoader />}><Courses /></Suspense></ProtectedRoute>} />
-        <Route path="training-plan" element={<ProtectedRoute requireRole={has("view_training_plan")}><Suspense fallback={<PageLoader />}><TrainingPlan /></Suspense></ProtectedRoute>} />
-        <Route path="archive" element={<ProtectedRoute requireRole={has("view_archive")}><Suspense fallback={<PageLoader />}><Archive /></Suspense></ProtectedRoute>} />
-        <Route path="evaluation" element={<ProtectedRoute requireRole={has("view_evaluation")}><Suspense fallback={<PageLoader />}><Evaluation /></Suspense></ProtectedRoute>} />
-        <Route path="reports" element={<ProtectedRoute requireRole={has("view_reports")}><Suspense fallback={<PageLoader />}><Reports /></Suspense></ProtectedRoute>} />
+        <Route path="courses" element={<PermissionRoute permission={has("view_courses")}><Suspense fallback={<PageLoader />}><Courses /></Suspense></PermissionRoute>} />
+        <Route path="training-plan" element={<PermissionRoute permission={has("view_training_plan")}><Suspense fallback={<PageLoader />}><TrainingPlan /></Suspense></PermissionRoute>} />
+        <Route path="archive" element={<PermissionRoute permission={has("view_archive")}><Suspense fallback={<PageLoader />}><Archive /></Suspense></PermissionRoute>} />
+        <Route path="evaluation" element={<PermissionRoute permission={has("view_evaluation")}><Suspense fallback={<PageLoader />}><Evaluation /></Suspense></PermissionRoute>} />
+        <Route path="reports" element={<PermissionRoute permission={has("view_reports")}><Suspense fallback={<PageLoader />}><Reports /></Suspense></PermissionRoute>} />
       </Route>
       <Route path="/survey/:courseId/:role" element={<Suspense fallback={<PageLoader />}><ExternalSurvey /></Suspense>} />
       <Route path="/login" element={<Navigate to="/" replace />} />

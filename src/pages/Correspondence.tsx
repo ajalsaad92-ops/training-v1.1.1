@@ -9,10 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { localDb } from "@/lib/localStore";
-import { Archive, Search, Plus, Upload, Eye, Loader2, FileSpreadsheet } from "lucide-react";
+import { Archive, Search, Plus, Upload, Eye, Loader2, FileSpreadsheet, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
+import { FileUploadButton, FileList } from "@/components/FileManager";
 import * as XLSX from "xlsx";
 
 const typeLabels: Record<string, string> = { outgoing_internal: "صادر داخلي", outgoing_external: "صادر خارجي", incoming_internal: "وارد داخلي", incoming_external: "وارد خارجي" };
@@ -29,15 +30,12 @@ const Correspondence = () => {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [importedItems, setImportedItems] = useState<CorrespondenceItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs = [{ key: "all", label: "الكل" }, { key: "incoming", label: "الوارد" }, { key: "outgoing", label: "الصادر" }];
 
-  const allItems = [...items, ...importedItems];
-
-  const filtered = allItems.filter((c) => {
-    const matchSearch = c.subject.includes(search) || c.number.includes(search);
+  const filtered = items.filter((c) => {
+    const matchSearch = c.subject.includes(search) || c.number.includes(search) || (c.date || "").includes(search);
     const matchTab = tab === "all" || (tab === "incoming" && c.type.startsWith("incoming")) || (tab === "outgoing" && c.type.startsWith("outgoing"));
     return matchSearch && matchTab;
   });
@@ -57,6 +55,23 @@ const Correspondence = () => {
     refetch();
   };
 
+  const handleDelete = (id: string) => {
+    if (!confirm("حذف المراسلة؟")) return;
+    localDb.correspondence.delete(id);
+    toast({ title: "تم", description: "تم حذف المراسلة" });
+    if (selected?.id === id) setSelected(null);
+    refetch();
+  };
+
+  const resolveType = (raw: string): string => {
+    const lower = raw.toLowerCase();
+    if (lower.includes("صادر") && lower.includes("خارج")) return "outgoing_external";
+    if (lower.includes("صادر")) return "outgoing_internal";
+    if (lower.includes("وارد") && lower.includes("خارج")) return "incoming_external";
+    if (lower.includes("وارد")) return "incoming_internal";
+    return "incoming_internal";
+  };
+
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -66,25 +81,25 @@ const Correspondence = () => {
       const wb = XLSX.read(bstr, { type: "binary" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
-      const mapped = jsonData.map((row: Record<string, unknown>, i: number) => {
+      let count = 0;
+      jsonData.forEach((row: Record<string, unknown>, i: number) => {
         const s = sanitizeExcelRow(row);
-        return {
-          id: `imported-${Date.now()}-${i}`,
+        const typeRaw = String(s["النوع"] || s["type"] || "وارد داخلي");
+        const item = {
           number: (s["الرقم"] || s["number"] || `IMP-${i + 1}`).slice(0, 50),
           date: (s["التاريخ"] || s["date"] || new Date().toISOString().split("T")[0]).slice(0, 20),
           subject: (s["الموضوع"] || s["subject"] || "—").slice(0, 300),
           from: (s["من"] || s["from"] || "—").slice(0, 200),
           to: (s["إلى"] || s["to"] || "—").slice(0, 200),
-          type: "incoming_internal",
+          type: resolveType(typeRaw),
           status: "in_progress",
           summary: (s["الملخص"] || s["summary"] || "").slice(0, 1000),
-          created_by: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         };
+        localDb.correspondence.insert(item);
+        count++;
       });
-      setImportedItems(mapped);
-      toast({ title: "تم", description: `تم استيراد ${mapped.length} مراسلة من الملف` });
+      toast({ title: "تم", description: `تم استيراد ${count} مراسلة وحفظها` });
+      refetch();
     };
     reader.readAsBinaryString(file);
     e.target.value = "";
@@ -139,8 +154,8 @@ const Correspondence = () => {
                   <td><StatusBadge status={statusLabels[item.status] || item.status} /></td>
                    <td className="no-print">
                      <div className="flex gap-1">
-                       <button onClick={() => setSelected(item)} className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="عرض"><Eye className="w-3.5 h-3.5" /></button>
-                       {has("upload_correspondence_attachment") && <button onClick={() => toast({ title: "تم", description: "تم رفع المرفق (محاكاة)" })} className="p-1.5 rounded-md bg-accent/10 text-accent hover:bg-accent/20 transition-colors" title="رفع مرفق"><Upload className="w-3.5 h-3.5" /></button>}
+                        <button onClick={() => setSelected(item)} className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="عرض"><Eye className="w-3.5 h-3.5" /></button>
+                        {has("delete_correspondence") && <button onClick={() => handleDelete(item.id)} className="p-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="حذف"><Trash2 className="w-3.5 h-3.5" /></button>}
                      </div>
                    </td>
                 </tr>
@@ -184,16 +199,34 @@ const Correspondence = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Details Dialog */}
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" dir="rtl">
           <DialogHeader><DialogTitle>تفاصيل المراسلة</DialogTitle></DialogHeader>
           {selected && (
             <div className="space-y-3 text-sm">
               {[["الرقم", selected.number], ["التاريخ", selected.date], ["الموضوع", selected.subject], ["من", selected.from], ["إلى", selected.to], ["النوع", typeLabels[selected.type] || selected.type], ["الملخص", selected.summary]].map(([label, value]) => (
                 <div key={label}><p className="text-muted-foreground text-xs">{label}</p><p className="font-medium text-foreground">{value}</p></div>
               ))}
-              <div><p className="text-muted-foreground text-xs">الحالة</p><StatusBadge status={statusLabels[selected.status] || selected.status} /></div>
+              <div><p className="text-muted-foreground text-xs">الحالة</p>
+                <Select value={selected.status} onValueChange={(v) => { localDb.correspondence.update(selected.id, { status: v }); setSelected({ ...selected, status: v }); refetch(); }}>
+                  <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in_progress">قيد الإجراء</SelectItem>
+                    <SelectItem value="done">منجز</SelectItem>
+                    <SelectItem value="archived">حفظ</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="border-t border-border pt-3">
+                <p className="text-xs font-bold text-foreground mb-2">المرفقات</p>
+                <FileList entityKey={`corr_${selected.id}`} />
+                <FileUploadButton entityKey={`corr_${selected.id}`} onUpload={() => {}} label="رفع مرفق" />
+              </div>
+              {has("delete_correspondence") && (
+                <div className="border-t border-border pt-3">
+                  <Button variant="destructive" size="sm" onClick={() => handleDelete(selected.id)}><Trash2 className="w-3.5 h-3.5" />حذف</Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

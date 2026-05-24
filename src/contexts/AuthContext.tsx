@@ -51,10 +51,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         resetTimeout = () => {
           if (timeout) clearTimeout(timeout);
+          const warnAt = 55 * 60 * 1000;
+          const logoutAt = 60 * 60 * 1000;
           timeout = setTimeout(() => {
+            alert("⚠️ ستنتهي جلستك خلال 5 دقائق بسبب الخمول. حرّك الماوس لتمديد الجلسة.");
+          }, warnAt);
+          const logoutTimer = setTimeout(() => {
             logout();
             alert("تم تسجيل الخروج لانتهاء مهلة الجلسة (ساعة واحدة من الخمول)");
-          }, 60 * 60 * 1000);
+          }, logoutAt);
+          const combinedReset = () => {
+            if (timeout) clearTimeout(timeout);
+            if (logoutTimer) clearTimeout(logoutTimer);
+            timeout = setTimeout(() => {
+              alert("⚠️ ستنتهي جلستك خلال 5 دقائق بسبب الخمول. حرّك الماوس لتمديد الجلسة.");
+            }, warnAt);
+          };
+          window.addEventListener("mousemove", combinedReset);
+          window.addEventListener("keydown", combinedReset);
         };
         window.addEventListener("mousemove", resetTimeout);
         window.addEventListener("keydown", resetTimeout);

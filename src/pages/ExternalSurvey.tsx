@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
+import { useParams, useSearchParams } from "react-router-dom";
 import { localDb } from "@/lib/localStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,10 +50,8 @@ export default function ExternalSurvey() {
     // It's better to always use the URL params for fallback display if local data isn't available.
     let c = null;
     try {
-       // We only try to read from localDb if it exists in the window context
-       // @ts-ignore
-       c = window.localDb ? window.localDb.courses.getAll().find((c: any) => c.id === courseId) : null;
-    } catch(e) {}
+       c = localDb.courses.getAll().find((c: any) => c.id === courseId) || null;
+     } catch(e) {}
 
     const courseName = searchParams.get("name");
     const courseDate = searchParams.get("date");
@@ -85,24 +82,19 @@ export default function ExternalSurvey() {
     }
 
     try {
-      const { error } = await supabase
-        .from('evaluations')
-        .insert([
-          {
-            course_id: courseId!,
-            evaluator_name: name,
-            evaluator_role: role === "trainee" ? "متدرب" : role === "trainer" ? "مدرب" : "مشرف",
-            scores: scores,
-            notes: notes,
-            is_external: true
-          }
-        ]);
-
-      if (error) throw error;
+      localDb.evaluations.insert({
+        course_id: courseId!,
+        evaluator_name: name,
+        evaluator_role: role === "trainee" ? "متدرب" : role === "trainer" ? "مدرب" : "مشرف",
+        scores: scores,
+        notes: notes,
+        is_external: true,
+        submitted_at: new Date().toISOString(),
+      });
 
       toast({ title: "تم", description: "شكراً لك! تم إرسال التقييم بنجاح." });
       setSubmitted(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error submitting evaluation:', error);
       toast({ title: "خطأ", description: "حدث خطأ أثناء إرسال التقييم، يرجى المحاولة مرة أخرى.", variant: "destructive" });
     }
@@ -123,7 +115,7 @@ export default function ExternalSurvey() {
         <CheckCircle2 className="w-16 h-16 text-success mb-4" />
         <h1 className="text-2xl font-bold text-foreground mb-2">تم الإرسال بنجاح!</h1>
         <p className="text-muted-foreground mb-6">شكراً لتقييمك ومساهمتك في تطوير برامجنا التدريبية.</p>
-        <Button onClick={() => window.close()} className="w-full">إغلاق</Button>
+        <Button onClick={() => { try { window.close(); } catch {} window.location.href = "/"; }} className="w-full">إغلاق</Button>
       </div>
     </div>
   );

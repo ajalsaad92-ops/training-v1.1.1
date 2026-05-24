@@ -139,6 +139,13 @@ export const ALL_PERMISSIONS: PermissionDef[] = [
   { key: "add_user", label: "إضافة مستخدم", description: "إنشاء حساب مستخدم جديد (موظف + حساب دخول)", example: "المشرف ينشئ حساب لموظف جديد", category: "users" },
   { key: "delete_user", label: "حذف مستخدم", description: "حذف مستخدم من النظام", example: "المدير يحذف حساب موظف استقال", category: "users" },
 
+  // ─── المراسلات ───
+  { key: "add_correspondence", label: "إضافة مراسلة", description: "إنشاء مراسلة جديدة", example: "الموظف ينشئ كتاب صادر", category: "correspondence" },
+  { key: "edit_correspondence", label: "تعديل مراسلة", description: "تعديل بيانات المراسلة", example: "المشرف يعدل موضوع مراسلة", category: "correspondence" },
+  { key: "delete_correspondence", label: "حذف مراسلة", description: "حذف مراسلة من السجل", example: "المشرف يحذف مراسلة خاطئة", category: "correspondence" },
+  { key: "import_correspondence_excel", label: "استيراد مراسلات Excel", description: "استيراد مراسلات من ملف Excel", example: "المشرف يستورد ملف مراسلات تاريخية", category: "correspondence" },
+  { key: "upload_correspondence_attachment", label: "رفع مرفق مراسلة", description: "رفع ملف مرفق بالمراسلة", example: "الموظف يرفع صورة كتاب", category: "correspondence" },
+
   // ─── الإعدادات ───
   { key: "manage_permissions", label: "إدارة الصلاحيات", description: "الدخول لتبويب الصلاحيات في الإعدادات وتعديل صلاحيات المستخدمين", example: "المدير يفتح تبويب الصلاحيات ويمنح موظف صلاحية إضافة دورات", category: "settings" },
   { key: "backup_data", label: "النسخ الاحتياطي", description: "تحميل نسخة احتياطية من جميع بيانات النظام", example: "المدير يحمّل نسخة احتياطية قبل صيانة النظام", category: "settings" },
@@ -194,6 +201,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "view_tasks", "start_task", "complete_task", "export_tasks", "print_tasks",
     "view_curriculum", "view_archive", "view_courses",
     "view_training_plan", "view_evaluation", "view_reports", "record_followup",
+    "add_correspondence", "upload_correspondence_attachment",
   ],
 };
 

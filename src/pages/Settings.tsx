@@ -198,6 +198,7 @@ const GeneralTab = ({ backupDone, onBackup, onReset }: { backupDone: boolean; on
 const UsersTab = () => {
   const [users, setUsers] = useState<Array<UserProfile & { email?: string }>>([]);
   const [showAdd, setShowAdd] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
   const [form, setForm] = useState({ email: "", password: "", name: "", section: "", position: "موظف", phone: "" });
   const [saving, setSaving] = useState(false);
   const { has, isAdmin } = useUserRole();
@@ -213,6 +214,8 @@ const UsersTab = () => {
 
   const handleAdd = () => {
     if (!form.email || !form.password || !form.name) { toast({ title: "نقص بيانات", variant: "destructive" }); return; }
+    const existing = localDb.userAccounts.getAll().find((a: any) => a.email === form.email);
+    if (existing) { toast({ title: "خطأ", description: "البريد الإلكتروني مستخدم بالفعل", variant: "destructive" }); return; }
     setSaving(true);
     const id = `emp-${Date.now()}`;
     let roles = ["individual"];
@@ -247,11 +250,15 @@ const UsersTab = () => {
         </div>
       </div>
 
+      <div className="flex items-center gap-2">
+        <Input placeholder="بحث..." value={userSearch} onChange={e => setUserSearch(e.target.value)} className="h-7 text-xs max-w-[180px]" />
+      </div>
+
       <div className="bg-card rounded-lg border border-border overflow-x-auto">
         <table className="w-full text-xs text-right">
           <thead className="bg-muted/50"><tr><th className="p-2">الاسم</th><th className="p-2">البريد</th><th className="p-2">القسم</th><th className="p-2">الأدوار</th>{has("delete_user") && <th className="p-2"></th>}</tr></thead>
           <tbody>
-            {users.filter(u => u.active !== false).map(u => (
+            {users.filter(u => u.active !== false && (!userSearch || u.name.includes(userSearch) || (u.email || "").includes(userSearch))).map(u => (
               <tr key={u.id} className="border-t border-border/50 hover:bg-muted/20">
                 <td className="p-2 font-medium">{u.name}</td>
                 <td className="p-2 text-muted-foreground" dir="ltr">{u.email || "—"}</td>

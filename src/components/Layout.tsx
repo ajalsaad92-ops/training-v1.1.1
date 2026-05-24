@@ -9,12 +9,31 @@ import NoirNav from "@/components/NoirNav";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import { useErrorMonitorCount, openErrorMonitor } from "@/hooks/useErrorMonitor";
 import { Loader2, Menu, X, Bell, Check, Info, AlertTriangle, Bug, Send } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Component } from "react";
+import type { ReactNode } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { logAction } from "@/lib/auditLog";
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) return (
+      <div className="flex items-center justify-center min-h-[40vh] p-8" dir="rtl">
+        <div className="text-center bg-card border border-border rounded-xl p-6 max-w-md">
+          <AlertTriangle className="w-12 h-12 text-warning mx-auto mb-3" />
+          <h2 className="text-lg font-bold text-foreground mb-2">حدث خطأ غير متوقع</h2>
+          <p className="text-sm text-muted-foreground mb-4">يرجى تحديث الصفحة أو المحاولة لاحقاً</p>
+          <Button onClick={() => { this.setState({ hasError: false }); window.location.reload(); }} variant="outline">تحديث الصفحة</Button>
+        </div>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 
 const Layout = () => {
   const { user, loading, originalUserId, revertImpersonation } = useAuth();
@@ -59,11 +78,11 @@ const Layout = () => {
       const empSection = user?.section || "غير محدد";
       const unitHeads = localDb.profiles.getAll().filter(p => p.roles?.includes("unit_head") && p.section === empSection);
       unitHeads.forEach(head => {
-        localDb.notifications.insert({ user_id: head.id, message: `قدم ${user?.name} تبريراً لغيابه يوم ${unjustifiedAbsence.date}`, type: "info", link: "/hr-attendance" });
+        localDb.notifications.insert({ user_id: head.id, message: `قدم ${user?.name} تبريراً لغيابه يوم ${unjustifiedAbsence.date}`, type: "info", link: "/hr" });
       });
       const managers = localDb.profiles.getAll().filter(p => p.roles?.includes("dept_manager"));
       managers.forEach(mgr => {
-        localDb.notifications.insert({ user_id: mgr.id, message: `قدم ${user?.name} تبريراً لغيابه يوم ${unjustifiedAbsence.date}`, type: "info", link: "/hr-attendance" });
+        localDb.notifications.insert({ user_id: mgr.id, message: `قدم ${user?.name} تبريراً لغيابه يوم ${unjustifiedAbsence.date}`, type: "info", link: "/hr" });
       });
 
       await logAction(user?.name || "مجهول", "تبرير غياب", `تبرير لغياب يوم ${unjustifiedAbsence.date}`);
@@ -102,7 +121,7 @@ const Layout = () => {
         )}
         <TopNav />
         <main className="flex-1 min-w-0 relative animate-fade-in">
-          <Outlet />
+          <ErrorBoundary><Outlet /></ErrorBoundary>
         </main>
         <ThemeSwitcher />
         
@@ -138,7 +157,7 @@ const Layout = () => {
         )}
         <NoirNav />
         <main className="flex-1 min-w-0 relative animate-fade-in pb-28">
-          <Outlet />
+          <ErrorBoundary><Outlet /></ErrorBoundary>
         </main>
         <ThemeSwitcher />
 
@@ -223,14 +242,14 @@ const Layout = () => {
       </div>
 
       <main className="flex-1 min-w-0 overflow-y-auto relative flex flex-col pt-12 md:pt-0">
-        <div className="hidden md:block absolute top-3 left-3 z-30" ref={notifRef}>
+        <div className="hidden md:block absolute top-3 end-3 z-30" ref={notifRef}>
           <button onClick={() => setNotifOpen(!notifOpen)} className="relative p-2 rounded-lg bg-card border border-border hover:shadow-md transition-shadow">
             <Bell className="w-5 h-5 text-foreground" />
             {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold animate-pulse">{unreadCount}</span>}
           </button>
 
           {notifOpen && (
-            <div className="absolute top-12 left-0 w-80 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-slide-down" dir="rtl">
+            <div className="absolute top-12 end-0 w-80 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-slide-down" dir="rtl">
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/30">
                 <span className="text-sm font-bold text-foreground">الإشعارات ({unreadCount} غير مقروءة)</span>
                 {unreadCount > 0 && (
@@ -264,7 +283,7 @@ const Layout = () => {
           )}
         </div>
 
-        <Outlet />
+        <ErrorBoundary><Outlet /></ErrorBoundary>
       </main>
       <ThemeSwitcher />
       </div>

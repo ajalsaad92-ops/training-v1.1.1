@@ -136,7 +136,6 @@ const Login = () => {
                 >
                   <p className="text-sm font-bold text-white truncate">{acc.profile.name}</p>
                   <p className="text-[10px] text-white/60">{acc.profile.roles.map(r => roleLabels[r] || r).join(" · ")}</p>
-                  <p className="text-[10px] text-white/40 mt-1" dir="ltr">{acc.email}</p>
                 </button>
               ))}
             </div>

@@ -1,4 +1,5 @@
 ﻿import { useNavigate } from "react-router-dom";
+import { useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useCurriculumItems, useNotifications, useTasks, useHRRequests, useCourses, useEmployees } from "@/hooks/useSupabaseData";
@@ -152,15 +153,14 @@ const ManagerDashboard = () => {
       localDb.hrRequests.update(id, { approval_status: "rejected", dept_manager_status: "rejected", dept_manager_by: userId, dept_manager_at: new Date().toISOString(), history });
     }
     if (req.created_by) {
-      localDb.notifications.insert({ user_id: req.created_by, message: action === "approve" ? `تمت الموافقة النهائية على طلبك (${req.type})` : `تم رفض طلبك (${req.type})`, type: action === "approve" ? "info" : "warning", link: "/hr-attendance" });
+      localDb.notifications.insert({ user_id: req.created_by, message: action === "approve" ? `تمت الموافقة النهائية على طلبك (${req.type})` : `تم رفض طلبك (${req.type})`, type: action === "approve" ? "info" : "warning", link: "/hr" });
     }
     toast({ title: action === "approve" ? "تمت الموافقة" : "تم الرفض" });
     refetchHR();
   };
 
   const navigateToPerson = (name: string) => {
-    const emp = employees.find(e => e.name === name);
-    if (emp) { navigate("/employees"); }
+    navigate("/hr");
   };
 
   return (
