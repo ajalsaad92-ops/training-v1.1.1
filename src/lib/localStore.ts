@@ -431,6 +431,7 @@ const getDefaultStore = (): StoreData => ({
   archiveSections: defaultArchiveSections,
   archiveUserPerms: defaultArchiveUserPerms,
   archiveYears: defaultArchiveYears,
+  evaluations: [],
 });
 
 let store: StoreData | null = null;
