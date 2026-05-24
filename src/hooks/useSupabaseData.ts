@@ -21,7 +21,12 @@ function useStoreSubscription(refetch: () => void) {
   useEffect(() => {
     refetch();
     const onChange = () => refetch();
-    const onStorage = (e: StorageEvent) => { if (e.key === "tms_local_store") refetch(); };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "tms_local_store") {
+        localDb.invalidateStore();
+        refetch();
+      }
+    };
     window.addEventListener("tms_store_changed", onChange);
     window.addEventListener("storage", onStorage);
     return () => {

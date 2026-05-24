@@ -232,10 +232,10 @@ const ManagerDashboard = () => {
               {pendingHR.map(req => (
                 <div key={req.id} className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2">
                   <div className="min-w-0 flex-1"><p className="text-xs font-medium truncate">{req.employee_name}</p><p className="text-[10px] text-muted-foreground">{req.type} — {req.date}</p></div>
-                   <div className="flex gap-1 shrink-0 no-print">
-                     {has("approve_hr_dept") && <button onClick={() => handleHRAction(req.id, "approve")} className="p-1 rounded bg-success/10 text-success hover:bg-success/20" title="موافقة"><Check className="w-3 h-3" /></button>}
-                     {has("reject_hr") && <button onClick={() => handleHRAction(req.id, "reject")} className="p-1 rounded bg-destructive/10 text-destructive hover:bg-destructive/20" title="رفض"><X className="w-3 h-3" /></button>}
-                   </div>
+                    <div className="flex gap-1 shrink-0 no-print">
+                      {has("approve_hr_dept") && req.created_by !== userId && <button onClick={() => handleHRAction(req.id, "approve")} className="p-1 rounded bg-success/10 text-success hover:bg-success/20" title="موافقة"><Check className="w-3 h-3" /></button>}
+                      {has("reject_hr") && req.created_by !== userId && <button onClick={() => handleHRAction(req.id, "reject")} className="p-1 rounded bg-destructive/10 text-destructive hover:bg-destructive/20" title="رفض"><X className="w-3 h-3" /></button>}
+                    </div>
                 </div>
               ))}
             </div>
@@ -404,10 +404,10 @@ const PrepDashboard = () => {
             {pendingHR.map(req => (
               <div key={req.id} className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2">
                 <div className="min-w-0 flex-1"><p className="text-xs font-medium">{req.employee_name}</p><p className="text-[10px] text-muted-foreground">{req.type} — {req.date}</p></div>
-                <div className="flex gap-1 shrink-0 no-print">
-                  {has("approve_hr_unit") && <button onClick={() => handleUnitApprove(req.id)} className="p-1 rounded bg-success/10 text-success hover:bg-success/20"><Check className="w-3 h-3" /></button>}
-                  {has("reject_hr") && <button onClick={() => handleReject(req.id)} className="p-1 rounded bg-destructive/10 text-destructive hover:bg-destructive/20"><X className="w-3 h-3" /></button>}
-                </div>
+                 <div className="flex gap-1 shrink-0 no-print">
+                   {has("approve_hr_unit") && req.created_by !== userId && <button onClick={() => handleUnitApprove(req.id)} className="p-1 rounded bg-success/10 text-success hover:bg-success/20"><Check className="w-3 h-3" /></button>}
+                   {has("reject_hr") && req.created_by !== userId && <button onClick={() => handleReject(req.id)} className="p-1 rounded bg-destructive/10 text-destructive hover:bg-destructive/20"><X className="w-3 h-3" /></button>}
+                 </div>
               </div>
             ))}
           </div>

@@ -470,6 +470,10 @@ function saveStore() {
 }
 
 
+export function invalidateStore() {
+  store = null;
+}
+
 export function resetStore() {
   store = getDefaultStore();
   saveStore();

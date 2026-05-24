@@ -154,7 +154,7 @@ export const ALL_PERMISSIONS: PermissionDef[] = [
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
   admin: ALL_PERMISSIONS.map(p => p.key),
-  dept_manager: ALL_PERMISSIONS.map(p => p.key).filter(k => !["manage_permissions", "reset_data"].includes(k)),
+  dept_manager: ALL_PERMISSIONS.map(p => p.key).filter(k => !["reset_data"].includes(k)),
   unit_head: [
     "view_dashboard", "view_attendance_section", "view_pending_requests_section", "view_tasks_section", "print_dashboard",
     "view_hr", "view_daily_situation", "create_leave_request", "approve_hr_unit", "reject_hr", "undo_hr_decision", "export_hr", "print_hr", "change_attendance",
