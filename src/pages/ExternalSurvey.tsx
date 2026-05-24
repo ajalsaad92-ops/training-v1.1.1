@@ -25,16 +25,25 @@ export default function ExternalSurvey() {
 
   useEffect(() => {
     // Check if course exists in localDb first (if accessed from admin device)
-    const c = localDb.courses.getAll().find((c: any) => c.id === courseId);
+    // NOTE: ExternalSurvey shouldn't rely heavily on localDb if it's meant for mobile.
+    // It's better to always use the URL params for fallback display if local data isn't available.
+    let c = null;
+    try {
+       // We only try to read from localDb if it exists in the window context
+       // @ts-ignore
+       c = window.localDb ? window.localDb.courses.getAll().find((c: any) => c.id === courseId) : null;
+    } catch(e) {}
+
+    const courseName = searchParams.get("name");
+    const courseDate = searchParams.get("date");
+    const trainerName = searchParams.get("trainer");
+    const supervisorName = searchParams.get("supervisor");
+    const extraInfo = searchParams.get("extraInfo");
+
     if (c) {
-      setCourse(c);
-    } else {
-      // If accessed from a mobile device (external survey), try to construct it from URL params
-      const courseName = searchParams.get("name");
-      const courseDate = searchParams.get("date");
-      if (courseName) {
-        setCourse({ id: courseId, name: courseName, date: courseDate });
-      }
+      setCourse({ ...c, trainerName: trainerName || c.trainer, supervisorName: supervisorName || c.supervisor, extraInfo });
+    } else if (courseName || courseId) {
+      setCourse({ id: courseId, name: courseName || "دورة تقييم", date: courseDate, trainerName, supervisorName, extraInfo });
     }
     setLoading(false);
   }, [courseId, searchParams]);
@@ -127,10 +136,19 @@ export default function ExternalSurvey() {
         <div className="bg-primary/10 p-6 border-b border-border/50 text-center">
           <h1 className="text-xl font-bold text-primary mb-1">{getRoleLabel()}</h1>
           <h2 className="text-sm text-foreground font-semibold truncate">{course.name || course.title}</h2>
-          <p className="text-xs text-muted-foreground mt-1">{course.date || course.start_date}</p>
+          {course.date && <p className="text-xs text-muted-foreground mt-1">{course.date}</p>}
+          {course.trainerName && <p className="text-xs text-muted-foreground mt-1">المدرب: {course.trainerName}</p>}
+          {course.supervisorName && <p className="text-xs text-muted-foreground mt-1">المشرف: {course.supervisorName}</p>}
         </div>
+
+        {course.extraInfo && (
+          <div className="mx-6 mt-4 p-3 bg-primary/5 rounded-lg border border-primary/20 text-sm text-foreground">
+            <p className="font-semibold text-primary text-xs mb-1">تعليمات ومعلومات خاصة:</p>
+            {course.extraInfo}
+          </div>
+        )}
         
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 pt-4">
           <div className="space-y-2">
             <Label>الاسم الكامل</Label>
             <Input 

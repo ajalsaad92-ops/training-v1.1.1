@@ -11,6 +11,7 @@ import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { GraduationCap, MapPin, Calendar, User, Eye, DollarSign, Award, QrCode, Plus, Search, Loader2, Pencil, Trash2, ClipboardList, PlayCircle, CheckCircle, Users, TrendingUp, ChevronLeft } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -45,6 +46,11 @@ const Courses = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [qrData, setQrData] = useState<{url: string, title: string, roleName: string} | null>(null);
+
+  // Barcode Hub State
+  const [showBarcodeHub, setShowBarcodeHub] = useState(false);
+  const [hubForm, setHubForm] = useState({ courseId: "", courseName: "", trainerName: "", supervisorName: "", extraInfo: "" });
+  const [hubQrs, setHubQrs] = useState<any[]>([]);
 
   useEffect(() => {
     const focusId = searchParams.get("focus");
@@ -160,6 +166,49 @@ const Courses = () => {
     return Math.min(100, Math.round((course.actual_cost / course.estimated_budget) * 100));
   };
 
+  const downloadQR = (svgId: string, filename: string) => {
+    const svg = document.getElementById(svgId) as unknown as SVGSVGElement;
+    if (!svg) return;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    const xml = new XMLSerializer().serializeToString(svg);
+    const svg64 = btoa(unescape(encodeURIComponent(xml)));
+    img.src = "data:image/svg+xml;base64," + svg64;
+    img.onload = () => {
+      canvas.width = svg.clientWidth || 200;
+      canvas.height = svg.clientHeight || 200;
+      if (ctx) {
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        const a = document.createElement("a");
+        a.download = `${filename}.png`;
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+      }
+    };
+  };
+
+  const handleGenerateHubQrs = () => {
+    if (!hubForm.courseName) return toast({ title: "خطأ", description: "يجب إدخال اسم الدورة", variant: "destructive" });
+    const cId = hubForm.courseId || ("custom-" + Date.now());
+    const baseUrl = window.location.origin;
+    const qrs = [
+      { role: "trainee", title: "تقييم المتدرب للمدرب", filename: `باركود_متدرب_${hubForm.courseName.replace(/\s+/g, "_")}` },
+      { role: "trainer", title: "تقييم المدرب للمتدرب", filename: `باركود_مدرب_${hubForm.courseName.replace(/\s+/g, "_")}` },
+      { role: "supervisor", title: "تقييم المشرف", filename: `باركود_مشرف_${hubForm.courseName.replace(/\s+/g, "_")}` }
+    ].map(t => {
+      const url = new URL(`${baseUrl}/survey/${cId}/${t.role}`);
+      url.searchParams.set("name", hubForm.courseName);
+      if (hubForm.trainerName) url.searchParams.set("trainer", hubForm.trainerName);
+      if (hubForm.supervisorName) url.searchParams.set("supervisor", hubForm.supervisorName);
+      if (hubForm.extraInfo) url.searchParams.set("extraInfo", hubForm.extraInfo);
+      return { ...t, url: url.toString(), id: `qr-${t.role}-${Date.now()}` };
+    });
+    setHubQrs(qrs);
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
@@ -180,7 +229,16 @@ const Courses = () => {
             <h2 className="text-xl md:text-2xl font-bold gradient-text">مركز التنفيذ التدريبي</h2>
             <p className="text-xs text-muted-foreground mt-1">تخطيط وتنفيذ ومتابعة الدورات التدريبية</p>
           </div>
-          {has("add_course") && <Button size="sm" className="gap-2" onClick={openCreate}><Plus className="w-4 h-4" />دورة جديدة</Button>}
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="gap-2 border-primary text-primary hover:bg-primary/10" onClick={() => {
+              setShowBarcodeHub(true);
+              setHubForm({ courseId: "", courseName: "", trainerName: "", supervisorName: "", extraInfo: "" });
+              setHubQrs([]);
+            }}>
+              <QrCode className="w-4 h-4" />إنشاء باركود
+            </Button>
+            {has("add_course") && <Button size="sm" className="gap-2" onClick={openCreate}><Plus className="w-4 h-4" />دورة جديدة</Button>}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-2">
@@ -553,6 +611,67 @@ const Courses = () => {
             </div>
           )}
           <p className="text-xs text-muted-foreground text-center">امسح الباركود للوصول إلى الاستمارة والمشاركة في التقييم عبر الشبكة.</p>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showBarcodeHub} onOpenChange={setShowBarcodeHub}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><QrCode className="w-5 h-5 text-primary" />إعداد وإنشاء باركود التقييم</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="bg-muted/30 p-4 rounded-xl border border-border space-y-4">
+              <div>
+                <Label>اختر دورة موجودة (أو أدخل يدوياً)</Label>
+                <Select value={hubForm.courseId} onValueChange={(v) => {
+                  const c = courses.find(x => x.id === v);
+                  if (c) {
+                    setHubForm({ ...hubForm, courseId: c.id, courseName: c.title, trainerName: c.trainer || "", supervisorName: c.supervisor || "" });
+                  }
+                }}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="اختر دورة مسجلة..." /></SelectTrigger>
+                  <SelectContent>
+                    {courses.map(c => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label>اسم الدورة</Label>
+                  <Input className="mt-1" value={hubForm.courseName} onChange={e => setHubForm({...hubForm, courseName: e.target.value})} placeholder="أدخل اسم الدورة..." />
+                </div>
+                <div>
+                  <Label>اسم المدرب</Label>
+                  <Input className="mt-1" value={hubForm.trainerName} onChange={e => setHubForm({...hubForm, trainerName: e.target.value})} placeholder="أدخل اسم المدرب..." />
+                </div>
+                <div>
+                  <Label>اسم المشرف</Label>
+                  <Input className="mt-1" value={hubForm.supervisorName} onChange={e => setHubForm({...hubForm, supervisorName: e.target.value})} placeholder="أدخل اسم المشرف..." />
+                </div>
+              </div>
+              <div>
+                <Label>معلومات خاصة / تعليمات للاستمارة</Label>
+                <Textarea className="mt-1 resize-none" rows={2} value={hubForm.extraInfo} onChange={e => setHubForm({...hubForm, extraInfo: e.target.value})} placeholder="سيتم عرض هذه التعليمات للمقيمين أعلى الاستمارة..." />
+              </div>
+              <Button onClick={handleGenerateHubQrs} className="w-full gap-2 mt-2"><QrCode className="w-4 h-4" />إنشاء واعتماد</Button>
+            </div>
+
+            {hubQrs.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-border">
+                {hubQrs.map((qr) => (
+                  <div key={qr.id} className="bg-card border border-border p-4 rounded-xl flex flex-col items-center text-center shadow-sm">
+                    <h3 className="font-bold text-sm text-foreground mb-3">{qr.title}</h3>
+                    <div className="bg-white p-2 rounded-lg border border-border mb-3 inline-block">
+                      <QRCodeSVG id={qr.id} value={qr.url} size={150} level="M" />
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full gap-2 mt-auto" onClick={() => downloadQR(qr.id, qr.filename)}>
+                      تصدير كصورة
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
