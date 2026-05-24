@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+﻿import { useState, useRef, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -151,7 +151,7 @@ const PageHeader = ({ title, subtitle, icon: Icon, sections, exportData, actions
               <Button variant="outline" size="sm" className="text-[10px] h-6" onClick={deselectAll}>إلغاء الكل</Button>
             </div>
 
-            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+            <div className="space-y-1.5 flex-1 overflow-y-auto">
               {sections?.map(section => (
                 <label
                   key={section.id}
@@ -193,3 +193,4 @@ const PageHeader = ({ title, subtitle, icon: Icon, sections, exportData, actions
 };
 
 export default PageHeader;
+

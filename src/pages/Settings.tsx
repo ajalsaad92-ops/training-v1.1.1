@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Suspense } from "react";
+﻿import { useState, useEffect, useCallback, Suspense } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { localDb, type UserProfile } from "@/lib/localStore";
@@ -114,7 +114,7 @@ const GeneralTab = ({ backupDone, onBackup, onReset }: { backupDone: boolean; on
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
         {has("backup_data") && (
           <div className="bg-card rounded-lg border border-border p-4">
             <h3 className="font-bold text-sm text-foreground mb-2 flex items-center gap-2"><Database className="w-4 h-4 text-primary" />النسخ الاحتياطي</h3>
@@ -374,7 +374,7 @@ const PermissionsTab = () => {
     <div className="space-y-4">
       <h3 className="font-bold text-sm text-foreground flex items-center gap-2"><Shield className="w-4 h-4 text-primary" />إدارة الصلاحيات</h3>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
         {/* User List */}
         <div className="bg-card rounded-lg border border-border overflow-hidden">
           <div className="p-2 border-b border-border bg-muted/30 flex items-center justify-between">
@@ -588,7 +588,7 @@ const ToolsTab = ({ logout, userName }: { logout: () => Promise<void>; userName:
   return (
     <div className="space-y-3">
       <h3 className="font-bold text-sm text-foreground flex items-center gap-2"><Bug className="w-4 h-4 text-primary" />أدوات</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
         <button onClick={toggleErrMon} className="bg-card border border-border rounded-lg p-3 flex items-center gap-3 hover:shadow-md transition-all text-right">
           <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${errMonVisible ? "bg-warning/10" : "bg-muted"}`}><Bug className={`w-4 h-4 ${errMonVisible ? "text-warning" : "text-muted-foreground"}`} /></div>
           <div><p className="text-xs font-bold">مراقب الأخطاء</p><p className="text-[10px] text-muted-foreground">{errMonVisible ? "مفعّل" : "معطّل"}</p></div>
@@ -607,3 +607,4 @@ const ToolsTab = ({ logout, userName }: { logout: () => Promise<void>; userName:
 };
 
 export default Settings;
+

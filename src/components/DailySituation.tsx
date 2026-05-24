@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+﻿import { useState, useMemo } from "react";
 import { useHRRequests, useEmployees, type HRRequest, type Employee } from "@/hooks/useSupabaseData";
 import { localDb } from "@/lib/localStore";
 import { toast } from "@/hooks/use-toast";
@@ -254,7 +254,7 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
       )}
 
       {/* 5-Card Grid */}
-      <div data-print-section="daily_stats" className={`grid grid-cols-5 ${embedded ? "gap-2" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"}`}>
+      <div data-print-section="daily_stats" className={`grid grid-cols-5 ${embedded ? "gap-2" : "grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3"}`}>
         {/* الحضور الكلي */}
         <div
           className={`bg-card border border-border rounded-lg text-center cursor-pointer hover:shadow-md transition-shadow ${embedded ? "p-2" : "rounded-xl p-4"}`}
@@ -536,3 +536,4 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
 };
 
 export default DailySituation;
+

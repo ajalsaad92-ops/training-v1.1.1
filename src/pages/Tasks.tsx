@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTasks, useTaskHandovers, useEmployees, useTaskComments } from "@/hooks/useSupabaseData";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -598,7 +598,7 @@ const Tasks = () => {
         </div>
       </div>
 
-      <div data-print-section="tasks_list" className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div data-print-section="tasks_list" className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
         <div className="bg-card border border-border rounded-xl p-4 text-center animate-slide-up delay-75">
           <p className="text-2xl font-bold text-primary animate-count-up">{baseVisibleTasks.length}</p>
           <p className="text-xs text-muted-foreground">إجمالي المهام</p>
@@ -626,7 +626,7 @@ const Tasks = () => {
           {myTasks.length > 0 && (
             <div>
               <h2 className="text-sm font-bold text-foreground mb-3 gradient-text">مهامي</h2>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
                 {myTasks.map((task, i) => renderTaskCard(task, true, i))}
               </div>
             </div>
@@ -634,7 +634,7 @@ const Tasks = () => {
           {!isIndividual && (
             <div>
               <h2 className="text-sm font-bold text-foreground mb-3">{myTasks.length > 0 ? "مهام أخرى" : "جميع المهام"}</h2>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
                 {(myTasks.length > 0 ? otherTasks : filteredTasks).length > 0 ?
                   (myTasks.length > 0 ? otherTasks : filteredTasks).map((task, i) => renderTaskCard(task, false, i))
                 : (
@@ -704,7 +704,7 @@ const Tasks = () => {
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="tab-content-enter grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+          <div className="tab-content-enter grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4 mt-3">
             <div className="bg-card border border-border rounded-xl p-5 flex flex-col items-center">
               <h4 className="text-xs font-bold text-muted-foreground mb-3">نسبة الإنجاز</h4>
               <CircularProgress value={completionRate} size={110} strokeWidth={9} />
@@ -982,7 +982,7 @@ const Tasks = () => {
                     <p className="text-xs font-bold text-foreground flex items-center gap-2">
                       <MessageSquare className="w-4 h-4 text-primary" />التعليقات ({visibleComments.length})
                     </p>
-                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    <div className="space-y-2 flex-1 overflow-y-auto pr-1">
                       {visibleComments.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-2">لا توجد تعليقات بعد</p>
                       ) : visibleComments.map((c: { id: string; author_id: string; author_name: string; recipient_name?: string; message: string; created_at: string; is_hidden?: boolean }) => {
@@ -1042,3 +1042,5 @@ const Tasks = () => {
 };
 
 export default Tasks;
+
+

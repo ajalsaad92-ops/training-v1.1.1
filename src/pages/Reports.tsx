@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+﻿import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   REPORT_SOURCES,
@@ -229,7 +229,7 @@ const Reports = () => {
                 <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">١</span>
                 <p className="text-sm font-bold text-foreground">اختر مصدر البيانات</p>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
                 {SOURCE_LIST.map((s) => {
                   const Icon = sourceIcons[s.key] || FileText;
                   const isSelected = source === s.key;
@@ -254,7 +254,7 @@ const Reports = () => {
                 <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">٢</span>
                 <p className="text-sm font-bold text-foreground">اختر الأعمدة المطلوبة ({columns.length}/{src.columns.length})</p>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-2">
                 {src.columns.map((c) => {
                   const isActive = columns.includes(c.key);
                   return (
@@ -281,7 +281,7 @@ const Reports = () => {
                 <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">٣</span>
                 <p className="text-sm font-bold text-foreground">فلترة وبحث</p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">من تاريخ</label>
                   <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
@@ -397,7 +397,7 @@ const Reports = () => {
         </TabsContent>
 
         <TabsContent value="executive" className="space-y-4 mt-4 tab-content-enter">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
             {exec.kpis.map((k, i) => {
               const Icon = KPI_ICONS[i % KPI_ICONS.length];
               const trend = k.hint?.includes("إجمالي") ? "up" : k.hint?.includes("متأخ") ? "down" : null;
@@ -429,7 +429,7 @@ const Reports = () => {
             })}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
             <ChartCard title="حالات الدورات" data={exec.courseStatus} type="pie" index={0} />
             <ChartCard title="حالات المهام" data={exec.taskStatus} type="bar" index={1} />
             <ChartCard title="الموظفون حسب القسم" data={exec.byDept} type="bar" index={2} />
@@ -454,7 +454,7 @@ const Reports = () => {
                 <p className="text-xs text-muted-foreground mt-1">اضغط "جدولة جديدة" لإعداد تقرير تلقائي</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
                 {schedules.map((s, idx) => {
                   const SrcIcon = sourceIcons[s.source] || FileText;
                   return (
@@ -570,3 +570,4 @@ const ChartCard = ({ title, data, type, index, perBarColor }: { title: string; d
 };
 
 export default Reports;
+

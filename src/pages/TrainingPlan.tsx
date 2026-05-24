@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+﻿import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
@@ -181,7 +181,7 @@ function MonthCalendar({ trainings, weekSchedules, calMonth, setCalMonth }: {
                     </div>
                   )}
                   {courses.length > 0 && (
-                    <div className="absolute bottom-0 left-0 right-0 bg-card/90 border-t border-border/30 px-1 py-0.5 text-[8px] hidden group-hover:block max-h-20 overflow-y-auto">
+                    <div className="absolute bottom-0 left-0 right-0 bg-card/90 border-t border-border/30 px-1 py-0.5 text-[8px] hidden group-hover:block flex-1 overflow-y-auto">
                       {courses.map((c, ci) => (
                         <div key={ci} className="truncate">{c.course_name}</div>
                       ))}
@@ -593,7 +593,7 @@ export default function TrainingPlan() {
         </TabsList>
 
         <TabsContent value="dashboard" data-print-section="map_view" className="tab-content-enter">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3 mb-4">
             {summaryCards.map((card) => (
               <Card key={card.label} className={`card-hover animate-slide-up ${card.delay} bg-gradient-to-br ${card.gradient} border-border/50 overflow-hidden`}>
                 <CardContent className="p-4">
@@ -716,7 +716,7 @@ export default function TrainingPlan() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
                 <Card className={`cursor-pointer card-hover animate-slide-up bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-border/50 ${statusFilter === null ? "ring-2 ring-primary/30" : ""}`} onClick={() => setStatusFilter(null)}>
                   <CardContent className="p-4 text-center">
                     <p className="text-3xl font-bold"><AnimatedNumber value={selectedGovStats.total} /></p>
@@ -752,7 +752,7 @@ export default function TrainingPlan() {
                     <h3 className="font-bold text-sm flex items-center gap-2"><Clock className="w-4 h-4 text-primary" />جدول الأسابيع</h3>
                   </div>
                   <CardContent className="p-3">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                    <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-2">
                       {selectedGovWeeks.map(w => (
                         <div key={w.id} className="bg-primary/5 border border-primary/10 rounded-lg p-2 text-center card-hover">
                           <p className="font-bold text-xs text-primary">الأسبوع {w.week}</p>
@@ -902,7 +902,7 @@ export default function TrainingPlan() {
                   <h3 className="font-bold text-sm flex items-center gap-2"><FileSpreadsheet className="w-4 h-4 text-primary" />استيراد من Excel</h3>
                 </div>
                 <CardContent className="p-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
                     <div
                       className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer card-hover transition-all ${isImporting ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30 hover:bg-primary/5"}`}
                       onClick={() => excelRef.current?.click()}
@@ -1068,7 +1068,7 @@ export default function TrainingPlan() {
           <DialogHeader>
             <DialogTitle className="gradient-text text-lg">{editingGov ? "تعديل بيانات المحافظة" : "إضافة بيانات محافظة"}</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3 py-2">
             <div className="space-y-1.5">
               <Label className="text-xs flex items-center gap-1"><MapPin className="w-3 h-3 text-primary" />المحافظة</Label>
               <Input value={govForm.governorate} onChange={e => setGovForm({ ...govForm, governorate: e.target.value })} className={govForm.governorate ? "border-green-500/30" : "border-destructive/30"} />
@@ -1192,3 +1192,5 @@ export default function TrainingPlan() {
     </div>
   );
 }
+
+

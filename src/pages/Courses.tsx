@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+﻿import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useCourses, useEmployees, type Course } from "@/hooks/useSupabaseData";
 import { localDb } from "@/lib/localStore";
@@ -259,7 +259,7 @@ const Courses = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
         <div className="bg-card rounded-xl border border-border p-4 flex items-center gap-3 card-hover animate-slide-up delay-75">
           <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center"><PlayCircle className="w-5 h-5 text-emerald-600" /></div>
           <div><p className="text-2xl font-bold text-foreground">{courses.filter(c => c.status === "active").length}</p><p className="text-xs text-muted-foreground">دورات نشطة</p></div>
@@ -278,7 +278,7 @@ const Courses = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
         <div className="md:col-span-2 bg-card rounded-xl border border-border p-4">
           <h4 className="text-sm font-bold text-foreground mb-3">الدورات حسب الحالة</h4>
           {courses.length > 0 ? (
@@ -337,7 +337,7 @@ const Courses = () => {
         </div>
       </div>
 
-      <div data-print-section="courses_list" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 print-content">
+      <div data-print-section="courses_list" className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4 print-content">
         {filtered.length > 0 ? filtered.map((course) => {
           const cfg = statusConfig[course.status] || statusConfig.planned;
           const IconComp = cfg.icon;
@@ -441,7 +441,7 @@ const Courses = () => {
           <div className="space-y-4">
             <div className="border border-border rounded-lg p-3 space-y-3">
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2"><GraduationCap className="w-4 h-4 text-primary" />المعلومات الأساسية</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
                 <div><Label>العنوان</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
                 <div><Label>الرمز</Label><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></div>
                 <div><Label>المكان</Label><Input value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} /></div>
@@ -635,7 +635,7 @@ const Courses = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
                 <div>
                   <Label>اسم الدورة</Label>
                   <Input className="mt-1" value={hubForm.courseName} onChange={e => setHubForm({...hubForm, courseName: e.target.value})} placeholder="أدخل اسم الدورة..." />
@@ -657,7 +657,7 @@ const Courses = () => {
             </div>
 
             {hubQrs.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-border">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4 pt-4 border-t border-border">
                 {hubQrs.map((qr) => (
                   <div key={qr.id} className="bg-card border border-border p-4 rounded-xl flex flex-col items-center text-center shadow-sm">
                     <h3 className="font-bold text-sm text-foreground mb-3">{qr.title}</h3>
@@ -679,3 +679,4 @@ const Courses = () => {
 };
 
 export default Courses;
+

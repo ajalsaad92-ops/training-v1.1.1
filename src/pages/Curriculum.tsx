@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+﻿import { useState, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useCurriculumItems, useEmployees, CurriculumItem } from "@/hooks/useSupabaseData";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -419,7 +419,7 @@ const Curriculum = () => {
 
       {viewMode === "all" && showStats && (
         <div data-print-section="stats_cards" className="space-y-4 animate-slide-up">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
             <div className="bg-card rounded-xl border border-border p-4 flex items-center gap-3 card-hover">
               <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center"><CheckCircle2 className="w-5 h-5 text-success" /></div>
               <div><p className="text-2xl font-bold text-foreground">{items.filter(i => i.status === "applied" && i.report_uploaded).length}</p><p className="text-xs text-muted-foreground">مناهج مكتملة</p></div>
@@ -434,7 +434,7 @@ const Curriculum = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
             <div className="bg-card rounded-xl border border-border p-4">
               <h4 className="text-sm font-bold text-foreground mb-3">المناهج حسب المرحلة</h4>
               {items.length > 0 ? (
@@ -564,7 +564,7 @@ const Curriculum = () => {
           </div>
 
           {displayMode === "grid" && (
-            <div data-print-section="curriculum_list" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div data-print-section="curriculum_list" className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
               {filteredByStage.length > 0 ? filteredByStage.map(item => {
                 const stage = computeCurriculumStage(item);
                 const cfg = stageConfig[stage];
@@ -716,7 +716,7 @@ const Curriculum = () => {
                       <span className="text-sm font-bold text-foreground">{cfg?.label || stage.label}</span>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${cfg?.bg || "bg-muted"} text-white`}>{stageItems.length}</span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 ms-4 border-s-2 border-dashed ps-4" style={{ borderColor: cfg?.bg ? `var(--tw-gradient-stops, currentColor)` : undefined }}>
+                    <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3 ms-4 border-s-2 border-dashed ps-4" style={{ borderColor: cfg?.bg ? `var(--tw-gradient-stops, currentColor)` : undefined }}>
                       {stageItems.map(item => {
                         const pct = getCompletionPercent(item);
                         return (
@@ -876,3 +876,4 @@ const Curriculum = () => {
 };
 
 export default Curriculum;
+

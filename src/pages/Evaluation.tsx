@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+﻿import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCourses } from "@/hooks/useSupabaseData";
 import { localDb } from "@/lib/localStore";
@@ -301,7 +301,7 @@ const Evaluation = () => {
         </TabsList>
 
         <TabsContent value="evaluation" className="mt-4 tab-content-enter">
-          <div data-print-section="evaluation_types" className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div data-print-section="evaluation_types" className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
             {evaluationTypes.map((et, idx) => {
               const pct = et.count > 0 ? Math.round((et.completed / et.count) * 100) : 0;
               const gradIdx = idx % EVAL_GRADIENTS.length;
@@ -491,7 +491,7 @@ const Evaluation = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
               {pieChartData.length > 0 && (
                 <div className="animate-slide-up delay-200">
                   <div className="bg-card rounded-2xl border border-border overflow-hidden h-full">
@@ -563,7 +563,7 @@ const Evaluation = () => {
                             <td className="px-3 py-1.5 text-foreground">{r.course_name}</td>
                             <td className="px-3 py-1.5 text-center whitespace-nowrap">{r.record_date}</td>
                             <td className="px-3 py-1.5 text-center"><StatusBadge status={complianceLabels[r.compliance_status] || r.compliance_status} variant={complianceColors[r.compliance_status] as "success" | "warning" | "info" | "neutral"} /></td>
-                            <td className="px-3 py-1.5 text-muted-foreground max-w-[200px] truncate" title={r.notes}>{r.notes}</td>
+                            <td className="px-3 py-1.5 text-muted-foreground " title={r.notes}>{r.notes}</td>
                             <td className="px-3 py-1.5 text-muted-foreground">{r.recorded_by_name}</td>
                             <td className="px-3 py-1.5 text-center">
                               <button onClick={() => navigate(`/training-plan?gov=${encodeURIComponent(r.governorate)}`)} className="text-primary hover:text-primary/80"><ExternalLink className="w-3.5 h-3.5" /></button></td>
@@ -584,7 +584,7 @@ const Evaluation = () => {
                   </div>
                   <CardContent className="p-4">
                     {followUpNotifs.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
                         {followUpNotifs.map(n => (
                           <div key={n.id} className="bg-card rounded-xl border border-border p-4 flex items-start justify-between gap-3 card-hover">
                             <div className="flex-1 min-w-0">
@@ -625,7 +625,7 @@ const Evaluation = () => {
                     {(() => {
                       const mine = followUpNotifs.filter(n => n.assigned_to === userId && n.active);
                       return mine.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
                           {mine.map(n => (
                             <div key={n.id} className="bg-card rounded-xl border border-border p-4 card-hover">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -736,3 +736,5 @@ const Evaluation = () => {
 };
 
 export default Evaluation;
+
+

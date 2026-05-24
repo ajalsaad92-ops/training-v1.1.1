@@ -141,7 +141,7 @@ const ManagerDashboard = () => {
       {/* ROW 1: الموقف اليومي (Attendance) */}
       <div data-print-section="attendance" className="bg-card border border-border rounded-xl p-4">
         <SectionHeader icon={UsersIcon} title="الموقف اليومي" action={<Button variant="link" size="sm" className="h-auto p-0 text-[10px]" onClick={() => navigate("/hr")}>عرض الكل</Button>} />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
           {/* الحاضرون */}
           <div className="bg-success/5 border border-success/20 rounded-lg p-3 cursor-pointer hover:shadow-sm transition-all" onClick={() => navigate("/hr")}>
             <div className="flex items-center gap-2 mb-2">
@@ -158,7 +158,7 @@ const ManagerDashboard = () => {
               <CalendarPlus className="w-4 h-4 text-warning" />
               <span className="text-xs font-bold text-warning">المجازون ({onLeave.length})</span>
             </div>
-            <div className="space-y-1 max-h-20 overflow-y-auto">
+            <div className="space-y-1 flex-1 overflow-y-auto">
               {onLeave.length === 0 ? <p className="text-[10px] text-muted-foreground">لا يوجد مجازين</p> :
                 Object.entries(leaveUsage).map(([name, days]) => (
                   <PersonRow key={name} name={name} detail={`${days}/${MONTHLY_LEAVE} يوم`} status="leave" onClick={() => navigateToPerson(name)} />
@@ -173,7 +173,7 @@ const ManagerDashboard = () => {
               <Timer className="w-4 h-4 text-primary" />
               <span className="text-xs font-bold text-primary">الزمنيات ({onTimeOff.length})</span>
             </div>
-            <div className="space-y-1 max-h-20 overflow-y-auto">
+            <div className="space-y-1 flex-1 overflow-y-auto">
               {onTimeOff.length === 0 ? <p className="text-[10px] text-muted-foreground">لا يوجد زمنيات</p> :
                 Object.entries(timeUsage).map(([name, hrs]) => (
                   <PersonRow key={name} name={name} detail={`${hrs}/${MONTHLY_TIME_HOURS} ساعة`} status="timeoff" onClick={() => navigateToPerson(name)} />
@@ -197,11 +197,11 @@ const ManagerDashboard = () => {
       </div>
 
       {/* ROW 2: طلبات معلقة + المهام */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
         <div data-print-section="pending_requests" className="bg-card border border-border rounded-xl p-4">
           <SectionHeader icon={ClipboardList} title={`طلبات معلقة (${pendingHR.length})`} action={<Button variant="link" size="sm" className="h-auto p-0 text-[10px]" onClick={() => navigate("/hr")}>عرض الكل</Button>} />
           {pendingHR.length === 0 ? <p className="text-xs text-muted-foreground text-center py-4">لا توجد طلبات</p> : (
-            <div className="space-y-1.5 max-h-40 overflow-y-auto">
+            <div className="space-y-1.5 flex-1 overflow-y-auto">
               {pendingHR.map(req => (
                 <div key={req.id} className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2">
                   <div className="min-w-0 flex-1"><p className="text-xs font-medium truncate">{req.employee_name}</p><p className="text-[10px] text-muted-foreground">{req.type} — {req.date}</p></div>
@@ -217,7 +217,7 @@ const ManagerDashboard = () => {
 
         <div data-print-section="tasks" className="bg-card border border-border rounded-xl p-4">
           <SectionHeader icon={ListChecks} title={`المهام (${tasks.length})`} action={<Button variant="link" size="sm" className="h-auto p-0 text-[10px]" onClick={() => navigate("/tasks")}>عرض الكل</Button>} />
-          <div className="space-y-1.5 max-h-40 overflow-y-auto">
+          <div className="space-y-1.5 flex-1 overflow-y-auto">
             {tasks.slice(0, 6).map(t => (
               <div key={t.id} className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate("/tasks")}>
                 <div className="min-w-0 flex-1"><p className="text-xs font-medium truncate">{t.title}</p><p className="text-[10px] text-muted-foreground">{t.unit}</p></div>
@@ -229,7 +229,7 @@ const ManagerDashboard = () => {
       </div>
 
       {/* ROW 3: تنبيهات + مراحل المنهاج + نسبة الإنجاز */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
         <div data-print-section="alerts" className="bg-card border border-border rounded-xl p-4 space-y-2">
           <p className="text-xs font-bold text-foreground flex items-center gap-1.5"><AlertCircle className="w-3.5 h-3.5 text-warning" />تنبيهات</p>
           {missingReports > 0 && <div className="flex items-center gap-2 bg-destructive/10 rounded-lg px-3 py-2 cursor-pointer hover:shadow-sm transition-all" onClick={() => navigate("/curriculum?filter=missing_report")}><BookX className="w-4 h-4 text-destructive shrink-0" /><span className="text-xs">{missingReports} منهج بدون تقرير</span></div>}
@@ -321,7 +321,7 @@ const PrepDashboard = () => {
       {/* ROW 1: الموقف اليومي */}
       <div data-print-section="attendance" className="bg-card border border-border rounded-xl p-4">
         <SectionHeader icon={UsersIcon} title="الموقف اليومي" action={<Button variant="link" size="sm" className="h-auto p-0 text-[10px]" onClick={() => navigate("/hr")}>عرض الكل</Button>} />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
           <div className="bg-success/5 border border-success/20 rounded-lg p-3 cursor-pointer hover:shadow-sm transition-all" onClick={() => navigate("/hr")}>
             <div className="flex items-center gap-2 mb-1"><UserCheck className="w-4 h-4 text-success" /><span className="text-xs font-bold text-success">الحاضرون</span></div>
             <p className="text-2xl font-bold">{employees.length - onLeave.length - absentToday.length}</p>
@@ -352,7 +352,7 @@ const PrepDashboard = () => {
       <div data-print-section="pending_requests" className="bg-card border border-border rounded-xl p-4">
         <SectionHeader icon={ClipboardList} title={`طلبات بانتظار إجراءك (${pendingHR.length})`} action={<Button variant="link" size="sm" className="h-auto p-0 text-[10px]" onClick={() => navigate("/hr")}>عرض الكل</Button>} />
         {pendingHR.length === 0 ? <p className="text-xs text-muted-foreground text-center py-4">لا توجد طلبات</p> : (
-          <div className="space-y-1.5 max-h-48 overflow-y-auto">
+          <div className="space-y-1.5 flex-1 overflow-y-auto">
             {pendingHR.map(req => (
               <div key={req.id} className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2">
                 <div className="min-w-0 flex-1"><p className="text-xs font-medium">{req.employee_name}</p><p className="text-[10px] text-muted-foreground">{req.type} — {req.date}</p></div>
@@ -369,7 +369,7 @@ const PrepDashboard = () => {
       {/* ROW 3: المهام */}
       <div data-print-section="tasks" className="bg-card border border-border rounded-xl p-4">
         <SectionHeader icon={ListChecks} title={`مهامي (${myTasks.length})`} action={<Button variant="link" size="sm" className="h-auto p-0 text-[10px]" onClick={() => navigate("/tasks")}>عرض الكل</Button>} />
-        <div className="space-y-1.5 max-h-40 overflow-y-auto">
+        <div className="space-y-1.5 flex-1 overflow-y-auto">
           {myTasks.slice(0, 5).map(t => (
             <div key={t.id} className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/30" onClick={() => navigate("/tasks")}>
               <div className="min-w-0 flex-1"><p className="text-xs font-medium truncate">{t.title}</p><p className="text-[10px] text-muted-foreground">{t.unit} | {t.stage}</p></div>
@@ -397,14 +397,14 @@ const CurriculumDashboard = () => {
 
   return (
     <div className="space-y-4">
-      <div data-print-section="curriculum_stages" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div data-print-section="curriculum_stages" className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
         <div className="bg-card border border-border rounded-xl p-3 hover:shadow-md transition-all cursor-pointer" onClick={() => navigate("/curriculum")}><div className="flex items-center gap-2 mb-1"><FileText className="w-4 h-4 text-primary" /><span className="text-xs font-bold">إجمالي المناهج</span></div><p className="text-2xl font-bold">{totalCur}</p></div>
         <div className="bg-card border border-border rounded-xl p-3 hover:shadow-md transition-all cursor-pointer" onClick={() => navigate("/curriculum")}><div className="flex items-center gap-2 mb-1"><BookX className="w-4 h-4 text-destructive" /><span className="text-xs font-bold">تقارير مفقودة</span></div><p className="text-2xl font-bold text-destructive">{missingReports}</p></div>
         <div className="bg-card border border-border rounded-xl p-3 hover:shadow-md transition-all cursor-pointer" onClick={() => navigate("/curriculum")}><div className="flex items-center gap-2 mb-1"><Presentation className="w-4 h-4 text-warning" /><span className="text-xs font-bold">عروض مفقودة</span></div><p className="text-2xl font-bold text-warning">{missingPPT}</p></div>
         <div className="bg-card border border-border rounded-xl p-3 hover:shadow-md transition-all cursor-pointer" onClick={() => navigate("/curriculum")}><div className="flex items-center gap-2 mb-1"><AlertCircle className="w-4 h-4 text-destructive" /><span className="text-xs font-bold">نقص بيانات</span></div><p className="text-2xl font-bold text-destructive">{incompleteFields.length}</p></div>
       </div>
 
-      <div data-print-section="achievement" className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div data-print-section="achievement" className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
         <div className="bg-card border border-border rounded-xl p-4 cursor-pointer hover:shadow-sm transition-all" onClick={() => navigate("/curriculum")}>
           <p className="text-xs font-bold text-foreground mb-3">مراحل المناهج</p>
           <div className="space-y-2">{(Object.keys(stageCounts) as CurriculumStage[]).map(s => <MiniBar key={s} value={stageCounts[s]} max={totalCur || 1} color={stageColors[s].split(" ")[0]} label={stageLabels[s]} />)}</div>
@@ -417,7 +417,7 @@ const CurriculumDashboard = () => {
 
       <div data-print-section="alerts" className="bg-card border border-border rounded-xl p-4">
         <SectionHeader icon={ListChecks} title={`المهام (${curTasks.length})`} action={<Button variant="link" size="sm" className="h-auto p-0 text-[10px]" onClick={() => navigate("/tasks")}>عرض الكل</Button>} />
-        <div className="space-y-1.5 max-h-40 overflow-y-auto">
+        <div className="space-y-1.5 flex-1 overflow-y-auto">
           {curTasks.slice(0, 5).map(t => (
             <div key={t.id} className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/30" onClick={() => navigate("/tasks")}>
               <div className="min-w-0 flex-1"><p className="text-xs font-medium truncate">{t.title}</p></div>
@@ -456,7 +456,7 @@ const IndividualDashboard = () => {
       {/* ROW 1: الموقف الشخصي */}
       <div data-print-section="attendance" className="bg-card border border-border rounded-xl p-4">
         <SectionHeader icon={UsersIcon} title="موقفي" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
           <div className={`border rounded-lg p-3 cursor-pointer hover:shadow-sm transition-all ${remainingLeaves === 0 ? "bg-destructive/5 border-destructive/20" : "bg-success/5 border-success/20"}`} onClick={() => navigate("/hr")}>
             <div className="flex items-center gap-2 mb-1"><CalendarPlus className="w-4 h-4 text-warning" /><span className="text-xs font-bold text-warning">رصيد الإجازات</span></div>
             <p className="text-2xl font-bold">{remainingLeaves}/{MONTHLY_LEAVE}</p>
@@ -480,11 +480,11 @@ const IndividualDashboard = () => {
       </div>
 
       {/* ROW 2: طلباتي + مهامي */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
         <div data-print-section="pending_requests" className="bg-card border border-border rounded-xl p-4">
           <SectionHeader icon={ClipboardList} title={`طلباتي (${myHR.length})`} action={<Button variant="link" size="sm" className="h-auto p-0 text-[10px]" onClick={() => navigate("/hr")}>عرض الكل</Button>} />
           {myHR.length === 0 ? <p className="text-xs text-muted-foreground text-center py-4">لا توجد طلبات</p> : (
-            <div className="space-y-1.5 max-h-40 overflow-y-auto">
+            <div className="space-y-1.5 flex-1 overflow-y-auto">
               {myHR.map(r => (
                 <div key={r.id} className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/30" onClick={() => navigate("/hr")}>
                   <div className="min-w-0 flex-1"><p className="text-xs font-medium">{r.type}</p><p className="text-[10px] text-muted-foreground">{r.date}</p></div>
@@ -498,7 +498,7 @@ const IndividualDashboard = () => {
         <div data-print-section="tasks" className="bg-card border border-border rounded-xl p-4">
           <SectionHeader icon={ListChecks} title={`مهامي (${myTasks.length})`} action={<Button variant="link" size="sm" className="h-auto p-0 text-[10px]" onClick={() => navigate("/tasks")}>عرض الكل</Button>} />
           {myTasks.length === 0 ? <p className="text-xs text-muted-foreground text-center py-4">لا توجد مهام</p> : (
-            <div className="space-y-1.5 max-h-40 overflow-y-auto">
+            <div className="space-y-1.5 flex-1 overflow-y-auto">
               {myTasks.map(t => (
                 <div key={t.id} className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/30" onClick={() => navigate("/tasks")}>
                   <div className="min-w-0 flex-1"><p className="text-xs font-medium truncate">{t.title}</p><p className="text-[10px] text-muted-foreground">{t.description}</p></div>
@@ -564,3 +564,5 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+

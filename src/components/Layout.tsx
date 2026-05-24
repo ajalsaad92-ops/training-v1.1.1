@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from "react-router-dom";
+﻿import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/hooks/useSupabaseData";
 import { useUITheme } from "@/contexts/UIThemeContext";
@@ -237,7 +237,7 @@ const Layout = () => {
                   <button onClick={markAllRead} className="text-xs text-primary hover:underline flex items-center gap-1"><Check className="w-3 h-3" />تعليم الكل كمقروء</button>
                 )}
               </div>
-              <div className="max-h-72 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto">
                 {errMon.total > 0 && (
                   <button type="button" onClick={() => { setNotifOpen(false); openErrorMonitor(); }}
                     className="w-full text-right flex items-start gap-3 px-4 py-3 border-b border-border/50 bg-destructive/5 hover:bg-destructive/10 transition-colors">
@@ -290,3 +290,4 @@ const Layout = () => {
 };
 
 export default Layout;
+

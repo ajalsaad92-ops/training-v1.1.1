@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback, useEffect } from "react";
+﻿import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { localDb } from "@/lib/localStore";
 import type { ArchiveDocument, ArchiveDocType, ArchivePart, ArchiveSection, ArchiveYear } from "@/lib/localStore";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -532,7 +532,7 @@ const Archive = () => {
         {/* === البحث والأرشيف === */}
         <TabsContent value="search" className="space-y-4">
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
             <StatCard icon={FolderOpen} label="إجمالي الوثائق" value={documents.length} gradient="from-indigo-500 to-indigo-600" iconColor="text-white" />
             <StatCard icon={ArrowDownRight} label="الوارد" value={incomingCount} gradient="from-green-500 to-emerald-600" iconColor="text-white" />
             <StatCard icon={ArrowUpRight} label="الصادر" value={outgoingCount} gradient="from-blue-500 to-blue-600" iconColor="text-white" />
@@ -584,7 +584,7 @@ const Archive = () => {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div data-print-section="search_filter" className="bg-card rounded-xl border border-border p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
                   <div className="sm:col-span-2 lg:col-span-4">
                     <div className="relative">
                       <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -685,9 +685,9 @@ const Archive = () => {
                       <td className="font-medium text-foreground font-mono text-xs">{doc.docNum}</td>
                       <td className="text-muted-foreground text-xs">{doc.docDateCH}</td>
                       <td className="text-muted-foreground text-xs">{doc.docDateHig}</td>
-                      <td className="font-medium text-foreground max-w-[200px] truncate text-xs">{doc.docSubj}</td>
-                      <td className="text-muted-foreground text-xs max-w-[120px] truncate">{doc.docTo}</td>
-                      <td className="text-muted-foreground text-xs max-w-[120px] truncate">{doc.docSorse}</td>
+                      <td className="font-medium text-foreground  text-xs">{doc.docSubj}</td>
+                      <td className="text-muted-foreground text-xs ">{doc.docTo}</td>
+                      <td className="text-muted-foreground text-xs ">{doc.docSorse}</td>
                       <td className="text-muted-foreground text-xs">{doc.storedNum}</td>
                       <td>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium ${DOC_TYPE_COLORS[doc.docType] || "bg-muted text-muted-foreground"}`}>
@@ -697,7 +697,7 @@ const Archive = () => {
                           {DOC_TYPE_LABELS[doc.docType] || "—"}
                         </span>
                       </td>
-                      <td className="text-muted-foreground text-xs max-w-[120px] truncate">{partNameMap[doc.pId] || "—"}</td>
+                      <td className="text-muted-foreground text-xs ">{partNameMap[doc.pId] || "—"}</td>
                       <td className="no-print">
                         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                           <button onClick={() => setSelectedDoc(doc)} className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="عرض"><Eye className="w-3.5 h-3.5" /></button>
@@ -761,7 +761,7 @@ const Archive = () => {
               <FormStepIndicator currentStep={addFormStep} steps={FORM_STEPS} />
 
               {addFormStep === 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
                   <div>
                     <Label className="text-xs flex items-center gap-1"><Layers className="w-3 h-3" />نوع الوثيقة <span className="text-destructive">*</span></Label>
                     <Select value={docForm.docType} onValueChange={(v) => {
@@ -800,7 +800,7 @@ const Archive = () => {
               )}
 
               {addFormStep === 1 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
                   <div>
                     <Label className="text-xs flex items-center gap-1"><Calendar className="w-3 h-3" />التاريخ الميلادي <span className="text-destructive">*</span></Label>
                     <Input type="date" value={docForm.docDateCH} onChange={(e) => setDocForm({ ...docForm, docDateCH: e.target.value })} />
@@ -817,7 +817,7 @@ const Archive = () => {
               )}
 
               {addFormStep === 2 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
                   <div>
                     <Label className="text-xs flex items-center gap-1"><Send className="w-3 h-3" />إلى (الجهة المرسل إليها)</Label>
                     <Input value={docForm.docTo} onChange={(e) => setDocForm({ ...docForm, docTo: e.target.value })} />
@@ -906,14 +906,14 @@ const Archive = () => {
 
         {/* === الإحصائيات === */}
         <TabsContent value="stats" className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
             <StatCard icon={FolderOpen} label="إجمالي الوثائق" value={documents.length} gradient="from-indigo-500 to-indigo-600" iconColor="text-white" />
             <StatCard icon={ArrowDownRight} label="الوارد" value={incomingCount} gradient="from-green-500 to-emerald-600" iconColor="text-white" />
             <StatCard icon={ArrowUpRight} label="الصادر" value={outgoingCount} gradient="from-blue-500 to-blue-600" iconColor="text-white" />
             <StatCard icon={ShieldAlert} label="سري" value={secretCount} gradient="from-red-500 to-red-600" iconColor="text-white" />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
             <Card>
               <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Layers className="w-4 h-4 text-primary" />الوثائق حسب النوع</CardTitle></CardHeader>
               <CardContent>
@@ -1011,7 +1011,7 @@ const Archive = () => {
             <Card>
               <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Clock className="w-4 h-4 text-primary" />أحدث الوثائق</CardTitle></CardHeader>
               <CardContent>
-                <div className="max-h-72 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto">
                   {recentDocs.map(doc => (
                     <TimelineItem key={doc.id} doc={doc} partNameMap={partNameMap} />
                   ))}
@@ -1132,7 +1132,7 @@ const Archive = () => {
               تعديل الوثيقة
             </DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
             <div>
               <Label className="text-xs">نوع الوثيقة <span className="text-destructive">*</span></Label>
               <Select value={docForm.docType} onValueChange={(v) => setDocForm({ ...docForm, docType: v })}>
@@ -1250,3 +1250,5 @@ const Archive = () => {
 };
 
 export default Archive;
+
+

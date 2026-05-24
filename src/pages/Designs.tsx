@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -121,7 +121,7 @@ const Designs = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
         {designThemes.map((theme, idx) => {
           const isSelected = selectedDesign === theme.id;
           const ThemeIcon = theme.icon;
@@ -180,7 +180,7 @@ const Designs = () => {
             <BarChart3 className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-bold text-foreground">معاينة التصميم الكلاسيكي</h3>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
             <div className="lg:col-span-3 space-y-2">
               {alertItems.map((item, i) => {
                 const AlertIcon = alertIcons[item.label] || AlertTriangle;
@@ -309,7 +309,7 @@ const Designs = () => {
             <Bell className="w-4 h-4 text-warning" />
             <h3 className="text-sm font-bold text-foreground">معاينة تصميم الإشعارات والتنبيهات</h3>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
             <div className="bg-card/80 border border-border/30 rounded-xl p-4 glass animate-slide-up delay-75">
               <h4 className="text-xs font-bold text-foreground mb-3 flex items-center gap-2"><CalendarPlus className="w-4 h-4 text-warning" />إشعارات الموافقات ({pendingHR + unitApprovedHR})</h4>
               <div className="space-y-2">
@@ -358,3 +358,4 @@ const Designs = () => {
 };
 
 export default Designs;
+

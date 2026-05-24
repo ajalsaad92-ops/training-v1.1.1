@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+﻿import { useState, useEffect, useCallback, useRef } from "react";
 import { Bug, X, Copy, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 
 interface ErrorEntry {
@@ -130,7 +130,7 @@ const ErrorMonitor = () => {
         </div>
       </div>
 
-      <div className="bg-gray-950 text-gray-200 max-h-60 overflow-y-auto border-t border-gray-700">
+      <div className="bg-gray-950 text-gray-200 flex-1 overflow-y-auto border-t border-gray-700">
         {errors.length === 0 ? (
           <div className="p-4 text-center text-gray-500">No errors</div>
         ) : (
@@ -154,7 +154,7 @@ const ErrorMonitor = () => {
               {entry.stack && (
                 <details className="mt-1">
                   <summary className="text-gray-500 cursor-pointer hover:text-gray-300 text-[10px]">Stack</summary>
-                  <pre className="text-gray-500 mt-0.5 text-[10px] whitespace-pre-wrap break-all max-h-20 overflow-y-auto">{entry.stack}</pre>
+                  <pre className="text-gray-500 mt-0.5 text-[10px] whitespace-pre-wrap break-all flex-1 overflow-y-auto">{entry.stack}</pre>
                 </details>
               )}
             </div>
@@ -166,3 +166,4 @@ const ErrorMonitor = () => {
 };
 
 export default ErrorMonitor;
+

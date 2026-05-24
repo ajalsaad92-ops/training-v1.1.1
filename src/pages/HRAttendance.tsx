@@ -1,4 +1,4 @@
-import DailySituation from "@/components/DailySituation";
+﻿import DailySituation from "@/components/DailySituation";
 import WeeklyShiftScheduler from "@/components/WeeklyShiftScheduler";
 import { useHRRequests, useEmployees, type HRRequest } from "@/hooks/useSupabaseData";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -575,7 +575,7 @@ const HRAttendance = () => {
         rows: filtered.map(r => ({ الاسم: r.employee_name, القسم: r.department, النوع: r.type, التاريخ: r.date, الحالة: statusLabels[r.approval_status] || r.approval_status, ملاحظات: r.notes || "" }))
       })} />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
         {statCards.map((card) => (
           <Card key={card.label} className={`animate-slide-up ${card.delay} bg-gradient-to-bl ${card.gradient} border-border/50 overflow-hidden`}>
             <CardContent className="p-4 flex items-center gap-4">
@@ -955,3 +955,4 @@ const HRAttendance = () => {
 };
 
 export default HRAttendance;
+
