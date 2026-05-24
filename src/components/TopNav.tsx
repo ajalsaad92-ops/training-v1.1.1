@@ -6,21 +6,21 @@ import { localDb } from "@/lib/localStore";
 import {
   LayoutDashboard, Users, BookOpen, GraduationCap, ClipboardCheck,
   BarChart3, Settings, Shield, ListTodo, FileText, Bell, LogOut, Sparkles, Menu, X,
-  FolderArchive,
+  FolderArchive, CalendarDays,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 const allNavItems = [
   { title: "لوحة القيادة", path: "/", icon: LayoutDashboard, perm: "view_dashboard" },
-  { title: "الموارد", path: "/hr", icon: Users, perm: "view_hr" },
-  { title: "الموظفين", path: "/employees", icon: Shield, perm: "view_employees" },
+  { title: "الموارد البشرية", path: "/hr", icon: Users, perm: "view_hr" },
   { title: "المهام", path: "/tasks", icon: ListTodo, perm: "view_tasks" },
-  { title: "المناهج", path: "/curriculum", icon: BookOpen, perm: "view_curriculum" },
+  { title: "المناهج والعروض", path: "/curriculum", icon: BookOpen, perm: "view_curriculum" },
   { title: "الأرشيف الإداري", path: "/archive", icon: FolderArchive, perm: "view_archive" },
-  { title: "التنفيذ", path: "/courses", icon: GraduationCap, perm: "view_courses" },
-  { title: "التقييم", path: "/evaluation", icon: ClipboardCheck, perm: "view_evaluation" },
+  { title: "التنفيذ التدريبي", path: "/courses", icon: GraduationCap, perm: "view_courses" },
+  { title: "الخطة التدريبية", path: "/training-plan", icon: CalendarDays, perm: "view_training_plan" },
+  { title: "التقييم والمتابعة", path: "/evaluation", icon: ClipboardCheck, perm: "view_evaluation" },
   { title: "التقارير", path: "/reports", icon: BarChart3, perm: "view_reports" },
-  { title: "السجل", path: "/activity-log", icon: FileText, perm: "view_activity_log" },
+  { title: "سجل النشاط", path: "/activity-log", icon: FileText, perm: "view_activity_log" },
 ];
 
 const TopNav = () => {
