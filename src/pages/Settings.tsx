@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, Suspense } from "react";
+﻿import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { localDb, type UserProfile } from "@/lib/localStore";
