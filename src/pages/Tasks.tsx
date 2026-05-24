@@ -912,7 +912,7 @@ const Tasks = () => {
                         {h.notes && <p className="text-muted-foreground mt-1">{h.notes}</p>}
                         
                         <div className="mt-2 flex items-center justify-between">
-                          <Badge variant={h.status === "approved" ? "success" : h.status === "rejected" ? "destructive" : "secondary"}>
+                          <Badge variant={h.status === "approved" ? "default" : h.status === "rejected" ? "destructive" : "secondary"}>
                             {h.status === "pending_acceptance" ? "بانتظار موافقة المستلم" : h.status === "pending_approval" ? "بانتظار موافقة المسؤول" : h.status === "approved" ? "تمت الإحالة" : h.status === "rejected" ? "مرفوضة" : "غير معروف"}
                           </Badge>
                           
