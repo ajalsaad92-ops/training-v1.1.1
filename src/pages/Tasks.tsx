@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import {
-  ListTodo, Plus, Loader2, ArrowLeftRight, Eye, Clock, Check, MessageSquare, Send,
+  ListTodo, Plus, Loader2, ArrowLeftRight, ArrowUpRight, Eye, Clock, Check, X, MessageSquare, Send,
   LayoutGrid, List as ListIcon, ChevronDown, Trophy, Play, CheckCircle2, Zap, Calendar, Paperclip,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
@@ -216,7 +216,10 @@ const Tasks = () => {
     await logAction(userName, isProposalToOtherUnit ? "اقتراح مهمة بين الشعب" : "إنشاء مهمة", form.title);
     toast({ title: "تم", description: isProposalToOtherUnit ? "تم رفع مقترح المهمة لرئيس القسم" : "تم إنشاء المهمة" });
     if (isProposalToOtherUnit) {
-      localDb.notifications.insert({ message: `مقترح مهمة جديدة من ${section} → ${targetUnit}: ${form.title}`, type: "info", link: "/tasks" });
+      const deptManagers = localDb.profiles.getAll().filter((p: any) => p.roles?.includes("dept_manager"));
+      deptManagers.forEach((mgr: any) => {
+        localDb.notifications.insert({ user_id: mgr.id, message: `مقترح مهمة جديدة من ${section} → ${targetUnit}: ${form.title}`, type: "info", link: "/tasks" });
+      });
     } else if (form.assigned_to) {
       localDb.notifications.insert({ user_id: form.assigned_to, message: `مهمة جديدة: ${form.title}`, type: "info", link: "/tasks" });
     }
@@ -507,6 +510,9 @@ const Tasks = () => {
       if (task.status === "pending" || task.status === "in_progress") {
         if (task.status === "pending") {
           btns.push(<button key="start" onClick={() => handleUpdateStatus(task.id, "in_progress")} className="p-1.5 rounded-md bg-warning/10 text-warning hover:bg-warning/20 text-xs flex items-center gap-1"><Play className="w-3 h-3" />بدء</button>);
+        }
+        if (!task.is_routine && has("advance_task_stage")) {
+          btns.push(<button key="advance" onClick={() => handleAdvanceStage(task.id)} className="p-1.5 rounded-md bg-accent/10 text-accent hover:bg-accent/20 text-xs flex items-center gap-1"><ArrowUpRight className="w-3 h-3" />ترقية</button>);
         }
         btns.push(<button key="done" onClick={() => handleMarkCompleted(task.id)} className="p-1.5 rounded-md bg-success/10 text-success hover:bg-success/20 text-xs flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />إنهاء</button>);
       }

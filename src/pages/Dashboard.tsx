@@ -435,6 +435,15 @@ const CurriculumDashboard = () => {
   const navigate = useNavigate();
   const { data: curriculumItems } = useCurriculumItems();
   const { data: tasks } = useTasks();
+  const { data: hrRequests } = useHRRequests();
+  const { data: employees } = useEmployees();
+  const { user } = useAuth();
+  const { section } = useUserRole();
+  const sectionEmployees = useMemo(() => employees.filter(e => e.section === section), [employees, section]);
+  const sectionEmpNames = useMemo(() => new Set(sectionEmployees.map(e => e.name)), [sectionEmployees]);
+  const todayStr = new Date().toISOString().split("T")[0];
+  const sectionPending = hrRequests.filter(r => sectionEmpNames.has(r.employee_name) && r.approval_status === "pending");
+  const todayAttendance = hrRequests.filter(r => sectionEmpNames.has(r.employee_name) && r.date === todayStr);
   const stageCounts = countByStage(curriculumItems);
   const pptCounts = countByPptStage(curriculumItems);
   const totalCur = curriculumItems.length;
@@ -445,6 +454,21 @@ const CurriculumDashboard = () => {
 
   return (
     <div className="space-y-4">
+      <div data-print-section="attendance_section" className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
+        <div className="bg-card border border-border rounded-xl p-3 cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/hr")}>
+          <div className="flex items-center gap-2 mb-1"><UsersIcon className="w-4 h-4 text-primary" /><span className="text-xs font-bold">موظفي الشعبة</span></div>
+          <p className="text-2xl font-bold">{sectionEmployees.length}</p>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-3 cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/hr")}>
+          <div className="flex items-center gap-2 mb-1"><Clock className="w-4 h-4 text-warning" /><span className="text-xs font-bold">طلبات معلقة</span></div>
+          <p className="text-2xl font-bold text-warning">{sectionPending.length}</p>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-3 cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/hr")}>
+          <div className="flex items-center gap-2 mb-1"><CalendarPlus className="w-4 h-4 text-accent" /><span className="text-xs font-bold">مواقف اليوم</span></div>
+          <p className="text-2xl font-bold">{todayAttendance.length}</p>
+        </div>
+      </div>
+
       <div data-print-section="curriculum_stages" className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
         <div className="bg-card border border-border rounded-xl p-3 hover:shadow-md transition-all cursor-pointer" onClick={() => navigate("/curriculum")}><div className="flex items-center gap-2 mb-1"><FileText className="w-4 h-4 text-primary" /><span className="text-xs font-bold">إجمالي المناهج</span></div><p className="text-2xl font-bold">{totalCur}</p></div>
         <div className="bg-card border border-border rounded-xl p-3 hover:shadow-md transition-all cursor-pointer" onClick={() => navigate("/curriculum")}><div className="flex items-center gap-2 mb-1"><BookX className="w-4 h-4 text-destructive" /><span className="text-xs font-bold">تقارير مفقودة</span></div><p className="text-2xl font-bold text-destructive">{missingReports}</p></div>

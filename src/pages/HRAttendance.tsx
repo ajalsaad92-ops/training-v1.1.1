@@ -264,6 +264,10 @@ const HRAttendance = () => {
   const handleManagerOverride = async (id: string) => {
     const req = requests.find(r => r.id === id);
     if (!req) return;
+    if (req.employee_name === userName) {
+      toast({ title: "خطأ", description: "لا يمكنك الموافقة على طلبك الخاص", variant: "destructive" });
+      return;
+    }
     const history = appendHistory(req, { kind: "override", action: "موافقة مباشرة من مدير القسم" });
     localDb.hrRequests.update(id, {
       approval_status: "approved",
@@ -378,7 +382,7 @@ const HRAttendance = () => {
           sectionMates.includes(r.employee_name) &&
           r.type === "إجازة اعتيادية" &&
           r.date === leaveForm.date &&
-          ["unit_approved", "approved"].includes(r.approval_status)
+          ["pending", "unit_approved", "approved"].includes(r.approval_status)
         );
         
         if (sectionOnLeave && !isUnitHead && !isManager && !isAdmin) {
