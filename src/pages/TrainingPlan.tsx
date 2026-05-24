@@ -348,6 +348,10 @@ export default function TrainingPlan() {
   };
 
   const saveGov = () => {
+    if (!has(editingGov ? "edit_governorate_training" : "add_governorate_training")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية حفظ بيانات المحافظة", variant: "destructive" });
+      return;
+    }
     const data = {
       ...govForm,
       course_hours: Number(govForm.course_hours) || 0,
@@ -367,6 +371,10 @@ export default function TrainingPlan() {
   };
 
   const deleteGov = (id: string) => {
+    if (!has("edit_governorate_training")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية حذف بيانات المحافظة", variant: "destructive" });
+      return;
+    }
     localDb.governorateTraining.delete(id);
     refreshData();
     toast({ title: "تم حذف البيانات" });

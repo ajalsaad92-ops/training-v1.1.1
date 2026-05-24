@@ -132,11 +132,27 @@ const ManagerDashboard = () => {
 
   const handleHRAction = (id: string, action: "approve" | "reject") => {
     const req = hrRequests.find(r => r.id === id);
+    if (!req) return;
+    if (req.created_by === userId) {
+      toast({ title: "خطأ", description: "لا يمكنك الموافقة على طلبك", variant: "destructive" });
+      return;
+    }
     const history = makeHistory(req, action === "approve" ? "approval" : "rejection", action === "approve" ? "موافقة نهائية من مدير القسم" : "رفض مدير القسم");
     if (action === "approve") {
-      localDb.hrRequests.update(id, { approval_status: "approved", dept_manager_status: "approved", dept_manager_by: userId, dept_manager_at: new Date().toISOString(), history });
+      const isPending = req.approval_status === "pending";
+      localDb.hrRequests.update(id, {
+        approval_status: "approved",
+        ...(isPending ? { unit_head_status: "approved", unit_head_by: userId, unit_head_at: new Date().toISOString() } : {}),
+        dept_manager_status: "approved",
+        dept_manager_by: userId,
+        dept_manager_at: new Date().toISOString(),
+        history,
+      });
     } else {
       localDb.hrRequests.update(id, { approval_status: "rejected", dept_manager_status: "rejected", dept_manager_by: userId, dept_manager_at: new Date().toISOString(), history });
+    }
+    if (req.created_by) {
+      localDb.notifications.insert({ user_id: req.created_by, message: action === "approve" ? `تمت الموافقة النهائية على طلبك (${req.type})` : `تم رفض طلبك (${req.type})`, type: action === "approve" ? "info" : "warning", link: "/hr-attendance" });
     }
     toast({ title: action === "approve" ? "تمت الموافقة" : "تم الرفض" });
     refetchHR();
@@ -293,13 +309,15 @@ const ManagerDashboard = () => {
 // ============ PREP DASHBOARD ============
 const PrepDashboard = () => {
   const navigate = useNavigate();
-  const { has, userId, userName } = useUserRole();
+  const { has, userId, userName, section } = useUserRole();
   const { data: employees } = useEmployees();
   const { data: hrRequests, refetch: refetchHR } = useHRRequests();
   const { data: tasks } = useTasks();
   const { data: courses } = useCourses();
 
-  const pendingHR = hrRequests.filter(r => r.approval_status === "pending" || r.approval_status === "unit_approved");
+  const sectionEmployees = useMemo(() => employees.filter(e => e.section === section), [employees, section]);
+  const sectionEmpNames = useMemo(() => new Set(sectionEmployees.map(e => e.name)), [sectionEmployees]);
+  const pendingHR = hrRequests.filter(r => (r.approval_status === "pending" || r.approval_status === "unit_approved") && sectionEmpNames.has(r.employee_name));
   const myTasks = tasks.filter(t => t.status !== "completed");
   const completedTasks = tasks.filter(t => t.status === "completed");
   const activeCourses = courses.filter(c => c.status === "active").length;
@@ -331,6 +349,7 @@ const PrepDashboard = () => {
 
   const handleUnitApprove = (id: string) => {
     const req = hrRequests.find(r => r.id === id);
+    if (!req || req.created_by === userId) return;
     const history = makeHistory(req, "approval", "موافقة رئيس الشعبة");
     localDb.hrRequests.update(id, { approval_status: "unit_approved", unit_head_status: "approved", unit_head_by: userId, unit_head_at: new Date().toISOString(), history });
     toast({ title: "موافقة رئيس الشعبة" });
@@ -338,6 +357,7 @@ const PrepDashboard = () => {
   };
   const handleReject = (id: string) => {
     const req = hrRequests.find(r => r.id === id);
+    if (!req || req.created_by === userId) return;
     const history = makeHistory(req, "rejection", "رفض رئيس الشعبة");
     localDb.hrRequests.update(id, { approval_status: "rejected", unit_head_status: "rejected", unit_head_by: userId, unit_head_at: new Date().toISOString(), history });
     toast({ title: "تم الرفض" });
@@ -421,7 +441,7 @@ const CurriculumDashboard = () => {
   const missingReports = curriculumItems.filter(c => !c.report_uploaded).length;
   const missingPPT = curriculumItems.filter(c => !c.presentation_uploaded).length;
   const incompleteFields = curriculumItems.filter(c => hasEmptyFields(c).length > 0);
-  const curTasks = tasks.filter(t => t.status !== "completed");
+  const curTasks = tasks.filter(t => t.status !== "completed" && t.unit === "المناهج");
 
   return (
     <div className="space-y-4">

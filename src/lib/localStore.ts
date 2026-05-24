@@ -530,7 +530,7 @@ export const localDb = {
     },
     insert: (c: Partial<Course>) => insertItem<Course>("courses", { created_at: now(), updated_at: now(), ...c } as Course),
     update: (id: string, u: Partial<Course>) => updateItem<Course>("courses", id, { updated_at: now(), ...u } as Partial<Course>),
-    delete: (id: string) => { deleteItem<CourseTrainee>("trainees", id); return deleteItem<Course>("courses", id); },
+    delete: (id: string) => { localDb.trainees.deleteByCourse(id); return deleteItem<Course>("courses", id); },
   },
   trainees: {
     getAll: () => getAll<CourseTrainee>("trainees"),

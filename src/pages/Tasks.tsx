@@ -150,6 +150,7 @@ const Tasks = () => {
 
   const baseVisibleTasks = tasks.filter(t => {
     if (isManager || isAdmin) return true;
+    if (isUnitHead) return t.unit === section || t.assigned_to === userId || has("view_other_units_tasks");
     if (isIndividual) return t.unit === section || t.assigned_to === userId;
     return true;
   });
@@ -299,10 +300,21 @@ const Tasks = () => {
   };
 
   const handleUpdateStatus = async (taskId: string, newStatus: string) => {
-    localDb.tasks.update(taskId, { status: newStatus });
+    if (newStatus === "approved" && !has("approve_task")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية اعتماد المهمة", variant: "destructive" });
+      return;
+    }
     const task = tasks.find(t => t.id === taskId);
+    if (newStatus === "completed") {
+      if (task) handleMarkCompleted(taskId);
+      return;
+    }
+    localDb.tasks.update(taskId, { status: newStatus });
     await logAction(userName, "تحديث حالة مهمة", `${task?.title} → ${statusLabels[newStatus]}`);
     toast({ title: "تم", description: "تم تحديث الحالة" });
+    if (task?.assigned_to && task.assigned_to !== userId) {
+      localDb.notifications.insert({ user_id: task.assigned_to, message: `تم تحديث حالة المهمة: ${task.title} → ${statusLabels[newStatus]}`, type: "info", link: `/tasks?focus=${taskId}` });
+    }
     refetch();
   };
 

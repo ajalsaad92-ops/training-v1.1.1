@@ -223,6 +223,10 @@ const Evaluation = () => {
   };
 
   const handleSaveNotif = () => {
+    if (!has("manage_followup")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية إدارة إشعارات المتابعة", variant: "destructive" });
+      return;
+    }
     const u = profiles.find(p => p.id === notifForm.assigned_to);
     if (!notifForm.governorate || !notifForm.assigned_to) {
       toast({ title: "خطأ", description: "يرجى اختيار المحافظة والمستخدم", variant: "destructive" });
@@ -245,12 +249,17 @@ const Evaluation = () => {
   };
 
   const handleDeleteNotif = (id: string) => {
+    if (!has("manage_followup")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية حذف إشعارات المتابعة", variant: "destructive" });
+      return;
+    }
     localDb.followUpNotifications.delete(id);
     toast({ title: "تم", description: "تم حذف إعداد الإشعار" });
     refreshData();
   };
 
   const handleToggleNotif = (id: string, active: boolean) => {
+    if (!has("manage_followup")) return;
     localDb.followUpNotifications.update(id, { active: !active });
     refreshData();
   };

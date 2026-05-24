@@ -75,10 +75,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    if (!email && !password) {
-      setUser(ADMIN_USER);
-      localStorage.setItem("tms_current_user_id", ADMIN_USER.id);
-      return { success: true };
+    if (!email || !password) {
+      return { success: false, error: "يرجى إدخال البريد الإلكتروني وكلمة المرور" };
     }
     const account = localDb.userAccounts.findByEmail(email);
     if (!account) return { success: false, error: "البريد الإلكتروني غير مسجل" };
@@ -117,6 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const impersonate = (targetUserId: string) => {
     if (!user) return;
+    if (!user.roles?.some(r => ["admin", "super_user"].includes(r))) return;
     localStorage.setItem("tms_original_user_id", user.id);
     localStorage.setItem("tms_impersonated_user_id", targetUserId);
     window.location.reload();

@@ -62,6 +62,8 @@ const Settings = () => {
   };
 
   const handleResetData = () => {
+    const input = prompt("اكتب 'إعادة تعيين' لتأكيد حذف جميع البيانات:");
+    if (input !== "إعادة تعيين") return;
     localStorage.removeItem("tms_local_store");
     localStorage.removeItem("tms_custom_permissions");
     toast({ title: "تم إعادة التعيين" });

@@ -308,6 +308,10 @@ const Archive = () => {
   }, [documents]);
 
   const handleSaveDoc = () => {
+    if (!has(showEditForm ? "edit_archive" : "add_archive")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية حفظ وثيقة", variant: "destructive" });
+      return;
+    }
     if (!docForm.docType || !docForm.docYear || !docForm.docNum || !docForm.docSubj || !docForm.docDateCH) {
       toast({ title: "خطأ", description: "يرجى ملء الحقول المطلوبة: النوع، السنة، الرقم، الموضوع، التاريخ", variant: "destructive" });
       return;
@@ -339,6 +343,11 @@ const Archive = () => {
   };
 
   const handleDeleteDoc = (id: string) => {
+    if (!has("delete_archive")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية حذف وثيقة", variant: "destructive" });
+      return;
+    }
+    if (!confirm("هل أنت متأكد من حذف هذه الوثيقة؟")) return;
     localDb.archiveDocuments.delete(id);
     toast({ title: "تم", description: "تم حذف الوثيقة" });
     setSelectedDoc(null);

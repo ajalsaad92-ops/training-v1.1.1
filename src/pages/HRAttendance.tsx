@@ -180,6 +180,10 @@ const HRAttendance = () => {
   const handleUnitApprove = async (id: string) => {
     const req = requests.find(r => r.id === id);
     if (!req) return;
+    if (req.created_by === userId) {
+      toast({ title: "خطأ", description: "لا يمكنك الموافقة على طلبك", variant: "destructive" });
+      return;
+    }
     const history = appendHistory(req, { kind: "approval", action: "موافقة رئيس الشعبة" });
     localDb.hrRequests.update(id, {
       approval_status: "unit_approved",
@@ -197,6 +201,10 @@ const HRAttendance = () => {
   const handleUnitReject = async (id: string, reason?: string) => {
     const req = requests.find(r => r.id === id);
     if (!req) return;
+    if (req.created_by === userId) {
+      toast({ title: "خطأ", description: "لا يمكنك رفض طلبك", variant: "destructive" });
+      return;
+    }
     const history = appendHistory(req, { kind: "rejection", action: "رفض رئيس الشعبة", reason });
     localDb.hrRequests.update(id, {
       approval_status: "rejected",
@@ -214,6 +222,10 @@ const HRAttendance = () => {
   const handleDeptApprove = async (id: string) => {
     const req = requests.find(r => r.id === id);
     if (!req) return;
+    if (req.created_by === userId) {
+      toast({ title: "خطأ", description: "لا يمكنك الموافقة على طلبك", variant: "destructive" });
+      return;
+    }
     const history = appendHistory(req, { kind: "approval", action: "موافقة نهائية من مدير القسم" });
     localDb.hrRequests.update(id, {
       approval_status: "approved",
@@ -231,6 +243,10 @@ const HRAttendance = () => {
   const handleDeptReject = async (id: string, reason?: string) => {
     const req = requests.find(r => r.id === id);
     if (!req) return;
+    if (req.created_by === userId) {
+      toast({ title: "خطأ", description: "لا يمكنك رفض طلبك", variant: "destructive" });
+      return;
+    }
     const history = appendHistory(req, { kind: "rejection", action: "رفض مدير القسم", reason });
     localDb.hrRequests.update(id, {
       approval_status: "rejected",
@@ -260,6 +276,11 @@ const HRAttendance = () => {
       history,
     });
     if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `تمت الموافقة على طلبك مباشرة من مدير القسم (${req.type})`, type: "info", link: "/hr-attendance" });
+    const emp = allEmployees.find(e => e.name === req.employee_name);
+    const sectionHeads = allEmployees.filter(e => e.roles?.includes("unit_head") && e.section === emp?.section && e.id !== userId);
+    sectionHeads.forEach(head => {
+      localDb.notifications.insert({ user_id: head.id, message: `تمت الموافقة المباشرة من مدير القسم على طلب ${req.employee_name} (${req.type})`, type: "info", link: "/hr-attendance" });
+    });
     await logAction(userName, "موافقة مباشرة (مدير)", `طلب ${id}`);
     toast({ title: "تم", description: "تمت الموافقة النهائية (صلاحية المدير)" });
     refetch();
@@ -284,6 +305,7 @@ const HRAttendance = () => {
       history,
     };
     if (undoTarget.level === "dept") {
+      reset.approval_status = "unit_approved";
       reset.dept_manager_status = "pending";
       reset.dept_manager_by = null;
       reset.dept_manager_at = null;
@@ -300,6 +322,10 @@ const HRAttendance = () => {
   const handleCancel = async (id: string) => {
     const req = requests.find(r => r.id === id);
     if (!req) return;
+    if (!["pending", "unit_approved"].includes(req.approval_status)) {
+      toast({ title: "خطأ", description: "لا يمكن إلغاء طلب تمت الموافقة النهائية عليه", variant: "destructive" });
+      return;
+    }
     const history = appendHistory(req, { kind: "cancel", action: "إلغاء الطلب من قبل المنتسب" });
     localDb.hrRequests.update(id, { approval_status: "cancelled", history });
     await logAction(userName, "إلغاء طلب", `طلب ${id}`);

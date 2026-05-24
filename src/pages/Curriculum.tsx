@@ -163,6 +163,10 @@ const Curriculum = () => {
   };
 
   const handleSave = async () => {
+    if (!canEditCurriculum) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية حفظ منهج", variant: "destructive" });
+      return;
+    }
     if (!form.title.trim()) {
       toast({ title: "خطأ", description: "العنوان مطلوب", variant: "destructive" });
       return;
@@ -193,6 +197,10 @@ const Curriculum = () => {
   };
 
   const handleFileUpload = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!has("upload_curriculum_file")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية رفع ملف", variant: "destructive" });
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
     const ext = file.name.split(".").pop()?.toLowerCase();
@@ -212,6 +220,10 @@ const Curriculum = () => {
   };
 
   const handleUploadPresentation = async (id: string) => {
+    if (!has("upload_presentation")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية رفع عرض تقديمي", variant: "destructive" });
+      return;
+    }
     localDb.curriculumItems.update(id, { presentation_uploaded: true });
     await logAction(userName, "رفع عرض تقديمي", `${id}`);
     toast({ title: "تم", description: "تم رفع العرض التقديمي" });

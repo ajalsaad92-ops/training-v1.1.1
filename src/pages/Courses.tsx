@@ -98,6 +98,10 @@ const Courses = () => {
   };
 
   const handleSave = async () => {
+    if (!has(editingCourse ? "edit_course" : "add_course")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية حفظ دورة", variant: "destructive" });
+      return;
+    }
     const result = courseSchema.safeParse(form);
     if (!result.success) {
       toast({ title: "خطأ", description: result.error.errors[0].message, variant: "destructive" });
@@ -127,6 +131,10 @@ const Courses = () => {
   };
 
   const handleDelete = async (id: string, title: string) => {
+    if (!has("delete_course")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية حذف دورة", variant: "destructive" });
+      return;
+    }
     if (!confirm("هل أنت متأكد من الحذف؟")) return;
     localDb.courses.delete(id);
     await logAction(user?.name || "مستخدم", "حذف دورة", title);
@@ -135,6 +143,15 @@ const Courses = () => {
   };
 
   const handleTraineeStatusChange = async (traineeId: string, traineeName: string, newStatus: string) => {
+    if (!has("update_trainee_status")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية تحديث حالة المتدرب", variant: "destructive" });
+      return;
+    }
+    const trainee = (selectedCourse?.trainees || []).find(t => t.id === traineeId);
+    if (trainee?.employee_id === user?.id) {
+      toast({ title: "خطأ", description: "لا يمكنك تغيير حالتك بنفسك", variant: "destructive" });
+      return;
+    }
     localDb.trainees.update(traineeId, { status: newStatus });
     await logAction(user?.name || "مستخدم", "تحديث حالة متدرب", traineeName);
     toast({ title: "تم", description: "تم تحديث حالة المتدرب" });
