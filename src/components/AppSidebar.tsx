@@ -29,8 +29,10 @@ interface AppSidebarProps {
 const personaLabels: Record<string, string> = {
   admin: "مدير النظام",
   dept_manager: "مدير القسم",
-  prep_unit_head: "رئيس شعبة الإعداد",
-  curriculum_unit_head: "رئيس شعبة المناهج",
+  prep_unit_head: "مسؤول شعبة الإعداد",
+  curriculum_unit_head: "مسؤول شعبة المناهج",
+  curriculum_individual: "موظف مناهج",
+  prep_individual: "موظف إعداد",
   individual: "مستخدم",
 };
 

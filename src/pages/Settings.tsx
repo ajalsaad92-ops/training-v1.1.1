@@ -213,7 +213,11 @@ const UsersTab = () => {
   const roleOptions = [
     { value: "admin", label: "مدير النظام" },
     { value: "dept_manager", label: "مدير القسم" },
-    { value: "unit_head", label: "رئيس شعبة" },
+    { value: "curriculum_unit_head", label: "مسؤول شعبة المناهج" },
+    { value: "prep_unit_head", label: "مسؤول شعبة الإعداد" },
+    { value: "unit_head", label: "رئيس شعبة (عام)" },
+    { value: "curriculum_individual", label: "موظف مناهج" },
+    { value: "prep_individual", label: "موظف إعداد" },
     { value: "trainer", label: "مدرب" },
     { value: "supervisor", label: "مشرف" },
     { value: "individual", label: "موظف" },
@@ -222,7 +226,11 @@ const UsersTab = () => {
   const positionRoleMap: Record<string, string[]> = {
     "مدير النظام (Admin)": ["admin"],
     "مدير القسم": ["dept_manager"],
+    "مسؤول شعبة المناهج": ["curriculum_unit_head"],
+    "مسؤول شعبة الإعداد": ["prep_unit_head"],
     "مسؤول شعبة": ["unit_head"],
+    "موظف مناهج": ["curriculum_individual"],
+    "موظف إعداد": ["prep_individual"],
     "مدرب": ["trainer"],
     "مشرف": ["supervisor"],
     "موظف": ["individual"],
@@ -856,7 +864,7 @@ const PermissionsTab = () => {
               <SelectContent>
                 {Object.entries(ROLE_PERMISSIONS).map(([role, perms]) => (
                   <SelectItem key={role} value={role}>
-                    {role === "admin" ? "مدير النظام" : role === "dept_manager" ? "مدير القسم" : role === "unit_head" ? "رئيس شعبة (عام)" : role === "prep_unit_head" ? "رئيس شعبة الإعداد" : role === "curriculum_unit_head" ? "رئيس شعبة المناهج" : role === "trainer" ? "مدرب" : role === "supervisor" ? "مشرف" : "فرد"} ({perms.length} صلاحية)
+                    {role === "admin" ? "مدير النظام" : role === "dept_manager" ? "مدير القسم" : role === "unit_head" ? "رئيس شعبة (عام)" : role === "prep_unit_head" ? "مسؤول شعبة الإعداد" : role === "curriculum_unit_head" ? "مسؤول شعبة المناهج" : role === "curriculum_individual" ? "موظف مناهج" : role === "prep_individual" ? "موظف إعداد" : role === "trainer" ? "مدرب" : role === "supervisor" ? "مشرف" : "فرد"} ({perms.length} صلاحية)
                   </SelectItem>
                 ))}
               </SelectContent>

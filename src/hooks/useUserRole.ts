@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getEffectivePermissions, hasPermission as checkPerm } from "@/lib/permissions";
 import { useMemo } from "react";
 
-export type UserPersona = "admin" | "dept_manager" | "unit_head" | "prep_unit_head" | "curriculum_unit_head" | "individual";
+export type UserPersona = "admin" | "dept_manager" | "unit_head" | "prep_unit_head" | "curriculum_unit_head" | "curriculum_individual" | "prep_individual" | "individual";
 
 export const useUserRole = () => {
   const { user } = useAuth();
@@ -13,8 +13,12 @@ export const useUserRole = () => {
 
   const isAdmin = roles.some(r => ["admin", "super_user"].includes(r));
   const isDeptManager = roles.some(r => ["dept_manager", "training_admin", "general_admin"].includes(r));
-  const isUnitHead = roles.includes("unit_head");
-  const isIndividual = !isAdmin && !isDeptManager && !isUnitHead;
+  const isUnitHead = roles.some(r => ["unit_head", "curriculum_unit_head", "prep_unit_head"].includes(r));
+  const isCurriculumUnitHead = roles.includes("curriculum_unit_head");
+  const isPrepUnitHead = roles.includes("prep_unit_head");
+  const isCurriculumIndividual = roles.includes("curriculum_individual");
+  const isPrepIndividual = roles.includes("prep_individual");
+  const isIndividual = !isAdmin && !isDeptManager && !isUnitHead && !isCurriculumIndividual && !isPrepIndividual;
   const isManager = isAdmin || isDeptManager;
 
   let persona: UserPersona = "individual";
@@ -22,6 +26,10 @@ export const useUserRole = () => {
     persona = "admin";
   } else if (isDeptManager) {
     persona = "dept_manager";
+  } else if (isCurriculumUnitHead) {
+    persona = "curriculum_unit_head";
+  } else if (isPrepUnitHead) {
+    persona = "prep_unit_head";
   } else if (isUnitHead) {
     if (section.includes("داد") || section.includes("تدريب") || section.includes("عداد")) {
       persona = "prep_unit_head";
@@ -30,6 +38,10 @@ export const useUserRole = () => {
     } else {
       persona = "unit_head";
     }
+  } else if (isCurriculumIndividual) {
+    persona = "curriculum_individual";
+  } else if (isPrepIndividual) {
+    persona = "prep_individual";
   }
 
   const effectivePermissions = useMemo(() => {
@@ -45,6 +57,10 @@ export const useUserRole = () => {
     isDeptManager,
     isManager,
     isUnitHead,
+    isCurriculumUnitHead,
+    isPrepUnitHead,
+    isCurriculumIndividual,
+    isPrepIndividual,
     isIndividual,
     section,
     userId,

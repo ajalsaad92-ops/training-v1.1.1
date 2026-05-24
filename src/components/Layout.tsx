@@ -76,7 +76,7 @@ const Layout = () => {
       localDb.hrRequests.update(unjustifiedAbsence.id, { notes: justification });
       
       const empSection = user?.section || "غير محدد";
-      const unitHeads = localDb.profiles.getAll().filter(p => p.roles?.includes("unit_head") && p.section === empSection);
+      const unitHeads = localDb.profiles.getAll().filter(p => (p.roles?.includes("unit_head") || p.roles?.includes("curriculum_unit_head") || p.roles?.includes("prep_unit_head")) && p.section === empSection);
       unitHeads.forEach(head => {
         localDb.notifications.insert({ user_id: head.id, message: `قدم ${user?.name} تبريراً لغيابه يوم ${unjustifiedAbsence.date}`, type: "info", link: "/hr" });
       });

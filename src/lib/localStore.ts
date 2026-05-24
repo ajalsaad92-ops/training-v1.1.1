@@ -7,7 +7,7 @@ import {
 } from "@/lib/seedData";
 
 const SEED_VERSION_KEY = "tms_seed_version";
-const SEED_VERSION = "2026-05-22-v2";
+const SEED_VERSION = "2026-05-24-v4";
 
 
 

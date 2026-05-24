@@ -10,6 +10,10 @@ const roleLabels: Record<string, string> = {
   admin: "مدير النظام",
   dept_manager: "مدير القسم",
   unit_head: "رئيس شعبة",
+  prep_unit_head: "مسؤول شعبة الإعداد",
+  curriculum_unit_head: "مسؤول شعبة المناهج",
+  curriculum_individual: "موظف مناهج",
+  prep_individual: "موظف إعداد",
   trainer: "مدرب",
   supervisor: "مشرف",
   individual: "مستخدم عادي",
@@ -128,16 +132,19 @@ const Login = () => {
           <div className="mt-6">
             <p className="text-primary-foreground/60 text-xs text-center mb-3">دخول سريع بحساب جاهز (تجريبي)</p>
             <div className="grid grid-cols-2 gap-2">
-              {defaultUserAccounts.slice(0, 6).map((acc) => (
-                <button
-                  key={acc.email}
-                  onClick={() => quickLogin(acc.email, acc.password)}
-                  className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-3 text-right hover:bg-white/20 transition-colors"
-                >
-                  <p className="text-sm font-bold text-white truncate">{acc.profile.name}</p>
-                  <p className="text-[10px] text-white/60">{acc.profile.roles.map(r => roleLabels[r] || r).join(" · ")}</p>
-                </button>
-              ))}
+              {defaultUserAccounts.filter(acc => !acc.profile.roles.includes("admin")).map((acc) => {
+                const sectionLabel = acc.profile.section.startsWith("شعبة المناهج") ? "شعبة المناهج" : acc.profile.section.startsWith("شعبة الإعداد") ? "شعبة الإعداد" : acc.profile.position;
+                return (
+                  <button
+                    key={acc.email}
+                    onClick={() => quickLogin(acc.email, acc.password)}
+                    className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-3 text-right hover:bg-white/20 transition-colors"
+                  >
+                    <p className="text-sm font-bold text-white truncate">{acc.profile.name}</p>
+                    <p className="text-[10px] text-white/60">{sectionLabel}</p>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

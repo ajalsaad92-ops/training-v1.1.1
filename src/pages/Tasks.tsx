@@ -269,7 +269,7 @@ const Tasks = () => {
       await logAction(userName, "قبول استلام مهمة", task?.title || "");
       toast({ title: "تم", description: "تم قبول المهمة وبانتظار موافقة رئيس الشعبة" });
       
-      const unitHeads = employees.filter(e => e.roles?.includes("unit_head") && e.section === task?.unit);
+      const unitHeads = employees.filter(e => (e.roles?.includes("unit_head") || e.roles?.includes("curriculum_unit_head") || e.roles?.includes("prep_unit_head")) && e.section === task?.unit);
       unitHeads.forEach(head => {
         localDb.notifications.insert({ user_id: head.id, message: `موافقة مطلوبة على إحالة مهمة: ${task?.title || ""}`, type: "info", link: `/tasks?focus=${task?.id}` });
       });
@@ -342,7 +342,7 @@ const Tasks = () => {
       localDb.notifications.insert({ user_id: targetId, message: `مهمة مكتملة بانتظار المراجعة: ${task?.title || ""}`, type: "info", link: `/tasks?focus=${taskId}` });
     } else {
       const profiles = localDb.profiles.getAll();
-      const unitHead = profiles.find((p: any) => p.roles?.includes("unit_head") && p.section === task?.unit);
+      const unitHead = profiles.find((p: any) => (p.roles?.includes("unit_head") || p.roles?.includes("curriculum_unit_head") || p.roles?.includes("prep_unit_head")) && p.section === task?.unit);
       localDb.notifications.insert({ user_id: unitHead?.id || null, message: `مهمة مكتملة بانتظار المراجعة: ${task?.title || ""}`, type: "info", link: `/tasks?focus=${taskId}` });
     }
     refetch();

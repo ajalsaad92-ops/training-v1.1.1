@@ -21,7 +21,11 @@ interface UserWithRoles {
 const ALL_ROLES = [
   { value: "admin", label: "مدير النظام" },
   { value: "dept_manager", label: "مدير قسم" },
-  { value: "unit_head", label: "رئيس شعبة" },
+  { value: "curriculum_unit_head", label: "مسؤول شعبة المناهج" },
+  { value: "prep_unit_head", label: "مسؤول شعبة الإعداد" },
+  { value: "unit_head", label: "رئيس شعبة (عام)" },
+  { value: "curriculum_individual", label: "موظف مناهج" },
+  { value: "prep_individual", label: "موظف إعداد" },
   { value: "trainer", label: "مدرب" },
   { value: "supervisor", label: "مشرف" },
   { value: "general_admin", label: "مدير عام" },

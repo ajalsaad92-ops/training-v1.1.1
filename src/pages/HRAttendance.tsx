@@ -146,12 +146,12 @@ const HRAttendance = () => {
   };
 
   const isPrepAbsent = useMemo(() => {
-    const head = allEmployees.find(e => e.roles?.includes("unit_head") && (e.section.includes("داد") || e.section.includes("تدريب") || e.section.includes("عداد")));
+    const head = allEmployees.find(e => (e.roles?.includes("unit_head") || e.roles?.includes("prep_unit_head")) && (e.section.includes("داد") || e.section.includes("تدريب") || e.section.includes("عداد")));
     return head ? stats.awayNames.has(head.name) : false;
   }, [allEmployees, stats.awayNames]);
 
   const isCurrAbsent = useMemo(() => {
-    const head = allEmployees.find(e => e.roles?.includes("unit_head") && (e.section.includes("ناهج") || e.section.includes("مناهج")));
+    const head = allEmployees.find(e => (e.roles?.includes("unit_head") || e.roles?.includes("curriculum_unit_head")) && (e.section.includes("ناهج") || e.section.includes("مناهج")));
     return head ? stats.awayNames.has(head.name) : false;
   }, [allEmployees, stats.awayNames]);
 

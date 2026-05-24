@@ -2,532 +2,43 @@
 import type { Employee, UserProfile, UserAccount, CurriculumItem, Course, CourseTrainee, HRRequest, CorrespondenceItem, Task, GovernorateTraining, FollowUpRecord, FollowUpNotification, Notification, AuditEntry, WeekScheduleEntry } from "./localStore";
 
 export const SEED_EMPLOYEES: Employee[] = [
-  {
-    "id": "emp-1",
-    "name": "أحمد محمد العلي",
-    "department": "شعبة الإعداد والتدريب",
-    "section": "شعبة الإعداد والتدريب",
-    "position": "مدير النظام",
-    "phone": "07700000001",
-    "work_schedule": "daily",
-    "created_at": "2026-01-01T08:00:00Z",
-    "updated_at": "2026-01-01T08:00:00Z"
-  },
-  {
-    "id": "emp-2",
-    "name": "فاطمة حسن الأمير",
-    "department": "إدارة التدريب",
-    "section": "إدارة التدريب",
-    "position": "مدير القسم",
-    "phone": "07700000002",
-    "work_schedule": "daily",
-    "created_at": "2026-01-01T08:00:00Z",
-    "updated_at": "2026-01-01T08:00:00Z"
-  },
-  {
-    "id": "emp-3",
-    "name": "خالد عبدالله السعيد",
-    "department": "شعبة الإعداد والتدريب",
-    "section": "شعبة الإعداد والتدريب",
-    "position": "رئيس شعبة الإعداد والتدريب",
-    "phone": "07700000003",
-    "work_schedule": "daily",
-    "created_at": "2026-01-01T08:00:00Z",
-    "updated_at": "2026-01-01T08:00:00Z"
-  },
-  {
-    "id": "emp-4",
-    "name": "نورة سعد المالكي",
-    "department": "شعبة المناهج",
-    "section": "شعبة المناهج",
-    "position": "رئيس شعبة المناهج",
-    "phone": "07700000004",
-    "work_schedule": "daily",
-    "created_at": "2026-01-01T08:00:00Z",
-    "updated_at": "2026-01-01T08:00:00Z"
-  },
-  {
-    "id": "emp-5",
-    "name": "محمد علي الزهراني",
-    "department": "شعبة الإعداد والتدريب",
-    "section": "شعبة الإعداد والتدريب",
-    "position": "موظف موارد بشرية",
-    "phone": "07700000005",
-    "work_schedule": "daily",
-    "created_at": "2026-01-01T08:00:00Z",
-    "updated_at": "2026-01-01T08:00:00Z"
-  },
-  {
-    "id": "emp-6",
-    "name": "سارة يوسف القحطاني",
-    "department": "شعبة الإعداد والتدريب",
-    "section": "شعبة الإعداد والتدريب",
-    "position": "موظف إعداد",
-    "phone": "07700000006",
-    "work_schedule": "daily",
-    "created_at": "2026-01-01T08:00:00Z",
-    "updated_at": "2026-01-01T08:00:00Z"
-  },
-  {
-    "id": "emp-7",
-    "name": "عبدالرحمن فهد الشمري",
-    "department": "شعبة الإعداد والتدريب",
-    "section": "شعبة الإعداد والتدريب",
-    "position": "أمين الأرشيف",
-    "phone": "07700000007",
-    "work_schedule": "daily",
-    "created_at": "2026-01-01T08:00:00Z",
-    "updated_at": "2026-01-01T08:00:00Z"
-  },
-  {
-    "id": "emp-8",
-    "name": "هند ماجد العتيبي",
-    "department": "شعبة الإعداد والتدريب",
-    "section": "شعبة الإعداد والتدريب",
-    "position": "منسق تنفيذ تدريبي",
-    "phone": "07700000008",
-    "work_schedule": "daily",
-    "created_at": "2026-01-01T08:00:00Z",
-    "updated_at": "2026-01-01T08:00:00Z"
-  },
-  {
-    "id": "emp-9",
-    "name": "علي حسين الخفاجي",
-    "department": "شعبة الإعداد والتدريب",
-    "section": "شعبة الإعداد والتدريب",
-    "position": "محرر تقارير",
-    "phone": "07700000009",
-    "work_schedule": "daily",
-    "created_at": "2026-01-01T08:00:00Z",
-    "updated_at": "2026-01-01T08:00:00Z"
-  },
-  {
-    "id": "emp-10",
-    "name": "زينب كريم الموسوي",
-    "department": "شعبة المناهج",
-    "section": "شعبة المناهج",
-    "position": "كاتب مناهج",
-    "phone": "07700000010",
-    "work_schedule": "daily",
-    "created_at": "2026-01-01T08:00:00Z",
-    "updated_at": "2026-01-01T08:00:00Z"
-  },
-  {
-    "id": "emp-11",
-    "name": "ليث جاسم العبيدي",
-    "department": "شعبة المناهج",
-    "section": "شعبة المناهج",
-    "position": "مصمم عروض",
-    "phone": "07700000011",
-    "work_schedule": "daily",
-    "created_at": "2026-01-01T08:00:00Z",
-    "updated_at": "2026-01-01T08:00:00Z"
-  },
-  {
-    "id": "emp-12",
-    "name": "مريم عادل الحسيني",
-    "department": "شعبة المناهج",
-    "section": "شعبة المناهج",
-    "position": "منسق خطة تدريبية",
-    "phone": "07700000012",
-    "work_schedule": "daily",
-    "created_at": "2026-01-01T08:00:00Z",
-    "updated_at": "2026-01-01T08:00:00Z"
-  },
-  {
-    "id": "emp-13",
-    "name": "حسن قاسم الربيعي",
-    "department": "شعبة المناهج",
-    "section": "شعبة المناهج",
-    "position": "مقيّم",
-    "phone": "07700000013",
-    "work_schedule": "daily",
-    "created_at": "2026-01-01T08:00:00Z",
-    "updated_at": "2026-01-01T08:00:00Z"
-  },
-  {
-    "id": "emp-14",
-    "name": "أمل ناصر الجبوري",
-    "department": "شعبة المناهج",
-    "section": "شعبة المناهج",
-    "position": "ضابط متابعة",
-    "phone": "07700000014",
-    "work_schedule": "daily",
-    "created_at": "2026-01-01T08:00:00Z",
-    "updated_at": "2026-01-01T08:00:00Z"
-  }
+  { "id": "emp-1", "name": "مدير النظام", "department": "إدارة التدريب", "section": "إدارة التدريب", "position": "مدير النظام", "phone": "07700000001", "work_schedule": "daily", "created_at": "2026-01-01T08:00:00Z", "updated_at": "2026-01-01T08:00:00Z" },
+  { "id": "emp-2", "name": "مرتضى عبد الحميد", "department": "إدارة التدريب", "section": "إدارة التدريب", "position": "مدير القسم", "phone": "07700000002", "work_schedule": "daily", "created_at": "2026-01-01T08:00:00Z", "updated_at": "2026-01-01T08:00:00Z" },
+  { "id": "emp-3", "name": "احمد جميل كاظم", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "مسؤول شعبة المناهج", "phone": "07700000003", "work_schedule": "daily", "created_at": "2026-01-01T08:00:00Z", "updated_at": "2026-01-01T08:00:00Z" },
+  { "id": "emp-4", "name": "حسين طالب", "department": "شعبة الإعداد والتدريب", "section": "شعبة الإعداد والتدريب", "position": "مسؤول شعبة الإعداد", "phone": "07700000004", "work_schedule": "daily", "created_at": "2026-01-01T08:00:00Z", "updated_at": "2026-01-01T08:00:00Z" },
+  { "id": "emp-5", "name": "انفال", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "موظف مناهج", "phone": "07700000005", "work_schedule": "daily", "created_at": "2026-01-01T08:00:00Z", "updated_at": "2026-01-01T08:00:00Z" },
+  { "id": "emp-6", "name": "مهند صدام", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "موظف مناهج", "phone": "07700000006", "work_schedule": "daily", "created_at": "2026-01-01T08:00:00Z", "updated_at": "2026-01-01T08:00:00Z" },
+  { "id": "emp-7", "name": "عبد الجبار", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "موظف مناهج", "phone": "07700000007", "work_schedule": "daily", "created_at": "2026-01-01T08:00:00Z", "updated_at": "2026-01-01T08:00:00Z" },
+  { "id": "emp-8", "name": "علي جاسم", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "مسؤول شعبة المناهج", "phone": "07700000008", "work_schedule": "daily", "created_at": "2026-01-01T08:00:00Z", "updated_at": "2026-01-01T08:00:00Z" },
+  { "id": "emp-9", "name": "مرتضى صادق", "department": "شعبة الإعداد والتدريب", "section": "شعبة الإعداد والتدريب", "position": "موظف إعداد", "phone": "07700000009", "work_schedule": "daily", "created_at": "2026-01-01T08:00:00Z", "updated_at": "2026-01-01T08:00:00Z" },
+  { "id": "emp-10", "name": "مصطفى مهدي", "department": "شعبة الإعداد والتدريب", "section": "شعبة الإعداد والتدريب", "position": "موظف إعداد", "phone": "07700000010", "work_schedule": "daily", "created_at": "2026-01-01T08:00:00Z", "updated_at": "2026-01-01T08:00:00Z" },
+  { "id": "emp-11", "name": "يحيى رسن", "department": "شعبة الإعداد والتدريب", "section": "شعبة الإعداد والتدريب", "position": "موظف إعداد", "phone": "07700000011", "work_schedule": "daily", "created_at": "2026-01-01T08:00:00Z", "updated_at": "2026-01-01T08:00:00Z" }
 ];
 export const SEED_PROFILES: UserProfile[] = [
-  {
-    "id": "emp-1",
-    "name": "أحمد محمد العلي",
-    "department": "شعبة الإعداد والتدريب",
-    "section": "شعبة الإعداد والتدريب",
-    "position": "مدير النظام",
-    "phone": "07700000001",
-    "roles": [
-      "admin",
-      "super_user"
-    ]
-  },
-  {
-    "id": "emp-2",
-    "name": "فاطمة حسن الأمير",
-    "department": "إدارة التدريب",
-    "section": "إدارة التدريب",
-    "position": "مدير القسم",
-    "phone": "07700000002",
-    "roles": [
-      "dept_manager",
-      "training_admin"
-    ]
-  },
-  {
-    "id": "emp-3",
-    "name": "خالد عبدالله السعيد",
-    "department": "شعبة الإعداد والتدريب",
-    "section": "شعبة الإعداد والتدريب",
-    "position": "رئيس شعبة الإعداد والتدريب",
-    "phone": "07700000003",
-    "roles": [
-      "unit_head"
-    ]
-  },
-  {
-    "id": "emp-4",
-    "name": "نورة سعد المالكي",
-    "department": "شعبة المناهج",
-    "section": "شعبة المناهج",
-    "position": "رئيس شعبة المناهج",
-    "phone": "07700000004",
-    "roles": [
-      "unit_head"
-    ]
-  },
-  {
-    "id": "emp-5",
-    "name": "محمد علي الزهراني",
-    "department": "شعبة الإعداد والتدريب",
-    "section": "شعبة الإعداد والتدريب",
-    "position": "موظف موارد بشرية",
-    "phone": "07700000005",
-    "roles": [
-      "individual"
-    ]
-  },
-  {
-    "id": "emp-6",
-    "name": "سارة يوسف القحطاني",
-    "department": "شعبة الإعداد والتدريب",
-    "section": "شعبة الإعداد والتدريب",
-    "position": "موظف إعداد",
-    "phone": "07700000006",
-    "roles": [
-      "individual"
-    ]
-  },
-  {
-    "id": "emp-7",
-    "name": "عبدالرحمن فهد الشمري",
-    "department": "شعبة الإعداد والتدريب",
-    "section": "شعبة الإعداد والتدريب",
-    "position": "أمين الأرشيف",
-    "phone": "07700000007",
-    "roles": [
-      "individual"
-    ]
-  },
-  {
-    "id": "emp-8",
-    "name": "هند ماجد العتيبي",
-    "department": "شعبة الإعداد والتدريب",
-    "section": "شعبة الإعداد والتدريب",
-    "position": "منسق تنفيذ تدريبي",
-    "phone": "07700000008",
-    "roles": [
-      "individual"
-    ]
-  },
-  {
-    "id": "emp-9",
-    "name": "علي حسين الخفاجي",
-    "department": "شعبة الإعداد والتدريب",
-    "section": "شعبة الإعداد والتدريب",
-    "position": "محرر تقارير",
-    "phone": "07700000009",
-    "roles": [
-      "individual"
-    ]
-  },
-  {
-    "id": "emp-10",
-    "name": "زينب كريم الموسوي",
-    "department": "شعبة المناهج",
-    "section": "شعبة المناهج",
-    "position": "كاتب مناهج",
-    "phone": "07700000010",
-    "roles": [
-      "individual"
-    ]
-  },
-  {
-    "id": "emp-11",
-    "name": "ليث جاسم العبيدي",
-    "department": "شعبة المناهج",
-    "section": "شعبة المناهج",
-    "position": "مصمم عروض",
-    "phone": "07700000011",
-    "roles": [
-      "individual"
-    ]
-  },
-  {
-    "id": "emp-12",
-    "name": "مريم عادل الحسيني",
-    "department": "شعبة المناهج",
-    "section": "شعبة المناهج",
-    "position": "منسق خطة تدريبية",
-    "phone": "07700000012",
-    "roles": [
-      "individual"
-    ]
-  },
-  {
-    "id": "emp-13",
-    "name": "حسن قاسم الربيعي",
-    "department": "شعبة المناهج",
-    "section": "شعبة المناهج",
-    "position": "مقيّم",
-    "phone": "07700000013",
-    "roles": [
-      "individual"
-    ]
-  },
-  {
-    "id": "emp-14",
-    "name": "أمل ناصر الجبوري",
-    "department": "شعبة المناهج",
-    "section": "شعبة المناهج",
-    "position": "ضابط متابعة",
-    "phone": "07700000014",
-    "roles": [
-      "individual"
-    ]
-  }
+  { "id": "emp-1", "name": "مدير النظام", "department": "إدارة التدريب", "section": "إدارة التدريب", "position": "مدير النظام", "phone": "07700000001", "roles": ["admin", "super_user"] },
+  { "id": "emp-2", "name": "مرتضى عبد الحميد", "department": "إدارة التدريب", "section": "إدارة التدريب", "position": "مدير القسم", "phone": "07700000002", "roles": ["dept_manager", "training_admin"] },
+  { "id": "emp-3", "name": "احمد جميل كاظم", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "مسؤول شعبة المناهج", "phone": "07700000003", "roles": ["curriculum_unit_head"] },
+  { "id": "emp-4", "name": "حسين طالب", "department": "شعبة الإعداد والتدريب", "section": "شعبة الإعداد والتدريب", "position": "مسؤول شعبة الإعداد", "phone": "07700000004", "roles": ["prep_unit_head"] },
+  { "id": "emp-5", "name": "انفال", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "موظف مناهج", "phone": "07700000005", "roles": ["curriculum_individual"] },
+  { "id": "emp-6", "name": "مهند صدام", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "موظف مناهج", "phone": "07700000006", "roles": ["curriculum_individual"] },
+  { "id": "emp-7", "name": "عبد الجبار", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "موظف مناهج", "phone": "07700000007", "roles": ["curriculum_individual"] },
+  { "id": "emp-8", "name": "علي جاسم", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "مسؤول شعبة المناهج", "phone": "07700000008", "roles": ["curriculum_unit_head"] },
+  { "id": "emp-9", "name": "مرتضى صادق", "department": "شعبة الإعداد والتدريب", "section": "شعبة الإعداد والتدريب", "position": "موظف إعداد", "phone": "07700000009", "roles": ["prep_individual"] },
+  { "id": "emp-10", "name": "مصطفى مهدي", "department": "شعبة الإعداد والتدريب", "section": "شعبة الإعداد والتدريب", "position": "موظف إعداد", "phone": "07700000010", "roles": ["prep_individual"] },
+  { "id": "emp-11", "name": "يحيى رسن", "department": "شعبة الإعداد والتدريب", "section": "شعبة الإعداد والتدريب", "position": "موظف إعداد", "phone": "07700000011", "roles": ["prep_individual"] }
 ];
 export const SEED_USER_ACCOUNTS: UserAccount[] = [
-  {
-    "email": "admin@tadreeb.iq",
-    "password": "admin123",
-    "profile": {
-      "id": "emp-1",
-      "name": "أحمد محمد العلي",
-      "department": "شعبة الإعداد والتدريب",
-      "section": "شعبة الإعداد والتدريب",
-      "position": "مدير النظام",
-      "phone": "07700000001",
-      "roles": [
-        "admin",
-        "super_user"
-      ]
-    }
-  },
-  {
-    "email": "manager@tadreeb.iq",
-    "password": "manager123",
-    "profile": {
-      "id": "emp-2",
-      "name": "فاطمة حسن الأمير",
-      "department": "إدارة التدريب",
-      "section": "إدارة التدريب",
-      "position": "مدير القسم",
-      "phone": "07700000002",
-      "roles": [
-        "dept_manager",
-        "training_admin"
-      ]
-    }
-  },
-  {
-    "email": "prep@tadreeb.iq",
-    "password": "prep123",
-    "profile": {
-      "id": "emp-3",
-      "name": "خالد عبدالله السعيد",
-      "department": "شعبة الإعداد والتدريب",
-      "section": "شعبة الإعداد والتدريب",
-      "position": "رئيس شعبة الإعداد والتدريب",
-      "phone": "07700000003",
-      "roles": [
-        "unit_head"
-      ]
-    }
-  },
-  {
-    "email": "curriculum@tadreeb.iq",
-    "password": "curr123",
-    "profile": {
-      "id": "emp-4",
-      "name": "نورة سعد المالكي",
-      "department": "شعبة المناهج",
-      "section": "شعبة المناهج",
-      "position": "رئيس شعبة المناهج",
-      "phone": "07700000004",
-      "roles": [
-        "unit_head"
-      ]
-    }
-  },
-  {
-    "email": "hr1@tadreeb.iq",
-    "password": "user123",
-    "profile": {
-      "id": "emp-5",
-      "name": "محمد علي الزهراني",
-      "department": "شعبة الإعداد والتدريب",
-      "section": "شعبة الإعداد والتدريب",
-      "position": "موظف موارد بشرية",
-      "phone": "07700000005",
-      "roles": [
-        "individual"
-      ]
-    }
-  },
-  {
-    "email": "prep1@tadreeb.iq",
-    "password": "user123",
-    "profile": {
-      "id": "emp-6",
-      "name": "سارة يوسف القحطاني",
-      "department": "شعبة الإعداد والتدريب",
-      "section": "شعبة الإعداد والتدريب",
-      "position": "موظف إعداد",
-      "phone": "07700000006",
-      "roles": [
-        "individual"
-      ]
-    }
-  },
-  {
-    "email": "archive1@tadreeb.iq",
-    "password": "user123",
-    "profile": {
-      "id": "emp-7",
-      "name": "عبدالرحمن فهد الشمري",
-      "department": "شعبة الإعداد والتدريب",
-      "section": "شعبة الإعداد والتدريب",
-      "position": "أمين الأرشيف",
-      "phone": "07700000007",
-      "roles": [
-        "individual"
-      ]
-    }
-  },
-  {
-    "email": "exec1@tadreeb.iq",
-    "password": "user123",
-    "profile": {
-      "id": "emp-8",
-      "name": "هند ماجد العتيبي",
-      "department": "شعبة الإعداد والتدريب",
-      "section": "شعبة الإعداد والتدريب",
-      "position": "منسق تنفيذ تدريبي",
-      "phone": "07700000008",
-      "roles": [
-        "individual"
-      ]
-    }
-  },
-  {
-    "email": "reports1@tadreeb.iq",
-    "password": "user123",
-    "profile": {
-      "id": "emp-9",
-      "name": "علي حسين الخفاجي",
-      "department": "شعبة الإعداد والتدريب",
-      "section": "شعبة الإعداد والتدريب",
-      "position": "محرر تقارير",
-      "phone": "07700000009",
-      "roles": [
-        "individual"
-      ]
-    }
-  },
-  {
-    "email": "cur1@tadreeb.iq",
-    "password": "user123",
-    "profile": {
-      "id": "emp-10",
-      "name": "زينب كريم الموسوي",
-      "department": "شعبة المناهج",
-      "section": "شعبة المناهج",
-      "position": "كاتب مناهج",
-      "phone": "07700000010",
-      "roles": [
-        "individual"
-      ]
-    }
-  },
-  {
-    "email": "pres1@tadreeb.iq",
-    "password": "user123",
-    "profile": {
-      "id": "emp-11",
-      "name": "ليث جاسم العبيدي",
-      "department": "شعبة المناهج",
-      "section": "شعبة المناهج",
-      "position": "مصمم عروض",
-      "phone": "07700000011",
-      "roles": [
-        "individual"
-      ]
-    }
-  },
-  {
-    "email": "plan1@tadreeb.iq",
-    "password": "user123",
-    "profile": {
-      "id": "emp-12",
-      "name": "مريم عادل الحسيني",
-      "department": "شعبة المناهج",
-      "section": "شعبة المناهج",
-      "position": "منسق خطة تدريبية",
-      "phone": "07700000012",
-      "roles": [
-        "individual"
-      ]
-    }
-  },
-  {
-    "email": "eval1@tadreeb.iq",
-    "password": "user123",
-    "profile": {
-      "id": "emp-13",
-      "name": "حسن قاسم الربيعي",
-      "department": "شعبة المناهج",
-      "section": "شعبة المناهج",
-      "position": "مقيّم",
-      "phone": "07700000013",
-      "roles": [
-        "individual"
-      ]
-    }
-  },
-  {
-    "email": "fu1@tadreeb.iq",
-    "password": "user123",
-    "profile": {
-      "id": "emp-14",
-      "name": "أمل ناصر الجبوري",
-      "department": "شعبة المناهج",
-      "section": "شعبة المناهج",
-      "position": "ضابط متابعة",
-      "phone": "07700000014",
-      "roles": [
-        "individual"
-      ]
-    }
-  }
+  { "email": "admin@tadreeb.iq", "password": "admin123", "profile": { "id": "emp-1", "name": "مدير النظام", "department": "إدارة التدريب", "section": "إدارة التدريب", "position": "مدير النظام", "phone": "07700000001", "roles": ["admin", "super_user"] } },
+  { "email": "murtadha@tadreeb.iq", "password": "manager123", "profile": { "id": "emp-2", "name": "مرتضى عبد الحميد", "department": "إدارة التدريب", "section": "إدارة التدريب", "position": "مدير القسم", "phone": "07700000002", "roles": ["dept_manager", "training_admin"] } },
+  { "email": "ahmed@tadreeb.iq", "password": "unit123", "profile": { "id": "emp-3", "name": "احمد جميل كاظم", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "مسؤول شعبة المناهج", "phone": "07700000003", "roles": ["curriculum_unit_head"] } },
+  { "email": "hussein@tadreeb.iq", "password": "unit123", "profile": { "id": "emp-4", "name": "حسين طالب", "department": "شعبة الإعداد والتدريب", "section": "شعبة الإعداد والتدريب", "position": "مسؤول شعبة الإعداد", "phone": "07700000004", "roles": ["prep_unit_head"] } },
+  { "email": "infal@tadreeb.iq", "password": "user123", "profile": { "id": "emp-5", "name": "انفال", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "موظف مناهج", "phone": "07700000005", "roles": ["curriculum_individual"] } },
+  { "email": "mohanad@tadreeb.iq", "password": "user123", "profile": { "id": "emp-6", "name": "مهند صدام", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "موظف مناهج", "phone": "07700000006", "roles": ["curriculum_individual"] } },
+  { "email": "abduljabbar@tadreeb.iq", "password": "user123", "profile": { "id": "emp-7", "name": "عبد الجبار", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "موظف مناهج", "phone": "07700000007", "roles": ["curriculum_individual"] } },
+  { "email": "ali@tadreeb.iq", "password": "unit123", "profile": { "id": "emp-8", "name": "علي جاسم", "department": "شعبة المناهج", "section": "شعبة المناهج", "position": "مسؤول شعبة المناهج", "phone": "07700000008", "roles": ["curriculum_unit_head"] } },
+  { "email": "murtadha2@tadreeb.iq", "password": "user123", "profile": { "id": "emp-9", "name": "مرتضى صادق", "department": "شعبة الإعداد والتدريب", "section": "شعبة الإعداد والتدريب", "position": "موظف إعداد", "phone": "07700000009", "roles": ["prep_individual"] } },
+  { "email": "mustafa@tadreeb.iq", "password": "user123", "profile": { "id": "emp-10", "name": "مصطفى مهدي", "department": "شعبة الإعداد والتدريب", "section": "شعبة الإعداد والتدريب", "position": "موظف إعداد", "phone": "07700000010", "roles": ["prep_individual"] } },
+  { "email": "yahya@tadreeb.iq", "password": "user123", "profile": { "id": "emp-11", "name": "يحيى رسن", "department": "شعبة الإعداد والتدريب", "section": "شعبة الإعداد والتدريب", "position": "موظف إعداد", "phone": "07700000011", "roles": ["prep_individual"] } }
 ];
 export const SEED_CURRICULUM: CurriculumItem[] = [
   {
@@ -911,7 +422,7 @@ export const SEED_COURSES: Course[] = [
     "start_date": "2026-02-15",
     "end_date": "2026-02-19",
     "trainer": "حسن قاسم الربيعي",
-    "trainer_id": "emp-13",
+    "trainer_id": "emp-7",
     "supervisor": "فاطمة حسن الأمير",
     "supervisor_id": "emp-2",
     "sponsor": "داخلي",
@@ -953,7 +464,7 @@ export const SEED_COURSES: Course[] = [
     "start_date": "2026-01-15",
     "end_date": "2026-01-18",
     "trainer": "حسن قاسم الربيعي",
-    "trainer_id": "emp-13",
+    "trainer_id": "emp-7",
     "supervisor": "خالد عبدالله السعيد",
     "supervisor_id": "emp-3",
     "sponsor": "داخلي",
@@ -978,7 +489,7 @@ export const SEED_TRAINEES: CourseTrainee[] = [
   {
     "id": "tr-2",
     "course_id": "crs-1",
-    "employee_id": "emp-12",
+    "employee_id": "emp-5",
     "name": "مريم عادل الحسيني",
     "status": "passed",
     "certificate_issued": true,
@@ -1005,7 +516,7 @@ export const SEED_TRAINEES: CourseTrainee[] = [
   {
     "id": "tr-5",
     "course_id": "crs-2",
-    "employee_id": "emp-14",
+    "employee_id": "emp-6",
     "name": "أمل ناصر الجبوري",
     "status": "waiting",
     "certificate_issued": false,
@@ -1023,7 +534,7 @@ export const SEED_TRAINEES: CourseTrainee[] = [
   {
     "id": "tr-7",
     "course_id": "crs-3",
-    "employee_id": "emp-14",
+    "employee_id": "emp-6",
     "name": "أمل ناصر الجبوري",
     "status": "passed",
     "certificate_issued": true,
@@ -1041,7 +552,7 @@ export const SEED_TRAINEES: CourseTrainee[] = [
   {
     "id": "tr-9",
     "course_id": "crs-3",
-    "employee_id": "emp-12",
+    "employee_id": "emp-5",
     "name": "مريم عادل الحسيني",
     "status": "passed",
     "certificate_issued": true,
@@ -1086,7 +597,7 @@ export const SEED_TRAINEES: CourseTrainee[] = [
   {
     "id": "tr-14",
     "course_id": "crs-5",
-    "employee_id": "emp-14",
+    "employee_id": "emp-6",
     "name": "أمل ناصر الجبوري",
     "status": "waiting",
     "certificate_issued": false,
@@ -1104,7 +615,7 @@ export const SEED_TRAINEES: CourseTrainee[] = [
   {
     "id": "tr-16",
     "course_id": "crs-6",
-    "employee_id": "emp-12",
+    "employee_id": "emp-5",
     "name": "مريم عادل الحسيني",
     "status": "passed",
     "certificate_issued": true,
@@ -1149,7 +660,7 @@ export const SEED_TRAINEES: CourseTrainee[] = [
   {
     "id": "tr-21",
     "course_id": "crs-7",
-    "employee_id": "emp-12",
+    "employee_id": "emp-5",
     "name": "مريم عادل الحسيني",
     "status": "waiting",
     "certificate_issued": false,
@@ -1318,7 +829,7 @@ export const SEED_HR: HRRequest[] = [
     "date": "2026-05-17",
     "approval_status": "pending",
     "notes": "إجازة مرضية لمدة يومين",
-    "created_by": "emp-12",
+    "created_by": "emp-5",
     "created_at": "2026-05-16T08:00:00Z",
     "updated_at": "2026-05-17T08:00:00Z",
     "unit_head_status": "pending",
@@ -1336,7 +847,7 @@ export const SEED_HR: HRRequest[] = [
     "date": "2026-05-18",
     "approval_status": "pending",
     "notes": "واجب لمدة يومين",
-    "created_by": "emp-13",
+    "created_by": "emp-7",
     "created_at": "2026-05-17T08:00:00Z",
     "updated_at": "2026-05-18T08:00:00Z",
     "unit_head_status": "pending",
@@ -1354,7 +865,7 @@ export const SEED_HR: HRRequest[] = [
     "date": "2026-05-19",
     "approval_status": "pending",
     "notes": "خروجية لمدة يومين",
-    "created_by": "emp-14",
+    "created_by": "emp-6",
     "created_at": "2026-05-18T08:00:00Z",
     "updated_at": "2026-05-19T08:00:00Z",
     "unit_head_status": "pending",
@@ -1665,7 +1176,7 @@ export const SEED_TASKS: Task[] = [
     "unit": "الخطة التدريبية",
     "stage": "writing",
     "status": "pending",
-    "assigned_to": "emp-12",
+    "assigned_to": "emp-5",
     "assigned_by": "emp-4",
     "previous_owner": null,
     "handed_over": false,
@@ -1685,7 +1196,7 @@ export const SEED_TASKS: Task[] = [
     "unit": "التقييم",
     "stage": "routine",
     "status": "in_progress",
-    "assigned_to": "emp-13",
+    "assigned_to": "emp-7",
     "assigned_by": "emp-4",
     "previous_owner": null,
     "handed_over": false,
@@ -2406,7 +1917,7 @@ export const SEED_FOLLOWUP_RECORDS: FollowUpRecord[] = [
     "record_date": "2026-05-11",
     "compliance_status": "on_track",
     "notes": "سير طبيعي",
-    "recorded_by": "emp-14",
+    "recorded_by": "emp-6",
     "recorded_by_name": "أمل ناصر الجبوري",
     "created_at": "2026-05-11T08:00:00Z"
   },
@@ -2430,7 +1941,7 @@ export const SEED_FOLLOWUP_RECORDS: FollowUpRecord[] = [
     "record_date": "2026-05-13",
     "compliance_status": "delayed",
     "notes": "تأخر بسبب عطلة",
-    "recorded_by": "emp-14",
+    "recorded_by": "emp-6",
     "recorded_by_name": "أمل ناصر الجبوري",
     "created_at": "2026-05-13T08:00:00Z"
   },
@@ -2454,7 +1965,7 @@ export const SEED_FOLLOWUP_RECORDS: FollowUpRecord[] = [
     "record_date": "2026-05-15",
     "compliance_status": "on_track",
     "notes": "سير طبيعي",
-    "recorded_by": "emp-14",
+    "recorded_by": "emp-6",
     "recorded_by_name": "أمل ناصر الجبوري",
     "created_at": "2026-05-15T08:00:00Z"
   },
@@ -2478,7 +1989,7 @@ export const SEED_FOLLOWUP_RECORDS: FollowUpRecord[] = [
     "record_date": "2026-05-17",
     "compliance_status": "on_track",
     "notes": "سير طبيعي",
-    "recorded_by": "emp-14",
+    "recorded_by": "emp-6",
     "recorded_by_name": "أمل ناصر الجبوري",
     "created_at": "2026-05-17T08:00:00Z"
   }
@@ -2499,7 +2010,7 @@ export const SEED_FOLLOWUP_NOTIFS: FollowUpNotification[] = [
   {
     "id": "fun-2",
     "governorate": "البصرة",
-    "assigned_to": "emp-14",
+    "assigned_to": "emp-6",
     "assigned_to_name": "أمل ناصر الجبوري",
     "assigned_by": "emp-1",
     "assigned_by_name": "أحمد محمد العلي",
@@ -2523,7 +2034,7 @@ export const SEED_FOLLOWUP_NOTIFS: FollowUpNotification[] = [
   {
     "id": "fun-4",
     "governorate": "ذي قار",
-    "assigned_to": "emp-14",
+    "assigned_to": "emp-6",
     "assigned_to_name": "أمل ناصر الجبوري",
     "assigned_by": "emp-1",
     "assigned_by_name": "أحمد محمد العلي",
@@ -2547,7 +2058,7 @@ export const SEED_FOLLOWUP_NOTIFS: FollowUpNotification[] = [
   {
     "id": "fun-6",
     "governorate": "بابل",
-    "assigned_to": "emp-14",
+    "assigned_to": "emp-6",
     "assigned_to_name": "أمل ناصر الجبوري",
     "assigned_by": "emp-1",
     "assigned_by_name": "أحمد محمد العلي",
