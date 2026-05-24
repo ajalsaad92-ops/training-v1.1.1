@@ -6,7 +6,7 @@ import { localDb } from "@/lib/localStore";
 import {
   LayoutDashboard, Users, BookOpen, GraduationCap, ClipboardCheck,
   BarChart3, Settings, Shield, ListTodo, FileText, Bell, LogOut, Sparkles, Menu, X,
-  FolderArchive,
+  FolderArchive, CalendarDays,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
