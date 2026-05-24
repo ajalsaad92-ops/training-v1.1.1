@@ -132,7 +132,7 @@ const Correspondence = () => {
                 <tr key={item.id}>
                   <td className="font-medium text-foreground font-mono text-xs">{item.number}</td>
                   <td className="text-muted-foreground">{item.date}</td>
-                  <td className="font-medium text-foreground ">{item.subject}</td>
+                  <td className="font-medium text-foreground max-w-[250px] truncate">{item.subject}</td>
                   <td className="text-muted-foreground">{item.from}</td>
                   <td className="text-muted-foreground">{item.to}</td>
                   <td><StatusBadge status={typeLabels[item.type] || item.type} variant="info" /></td>
