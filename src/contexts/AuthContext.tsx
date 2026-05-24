@@ -37,19 +37,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const savedUserId = localStorage.getItem("tms_impersonated_user_id") || localStorage.getItem("tms_current_user_id");
     const origId = localStorage.getItem("tms_original_user_id");
-    
+
     if (origId) setOriginalUserId(origId);
+
+    let timeout: NodeJS.Timeout | undefined;
+    let resetTimeout: (() => void) | undefined;
 
     if (savedUserId) {
       const profile = localDb.profiles.getById(savedUserId);
       if (profile && profile.active !== false) {
         setUser(profile);
         setSession({ user: { id: savedUserId } });
-        
-        // Session timeout logic (1 hour of inactivity)
-        let timeout: NodeJS.Timeout;
-        const resetTimeout = () => {
-          clearTimeout(timeout);
+
+        resetTimeout = () => {
+          if (timeout) clearTimeout(timeout);
           timeout = setTimeout(() => {
             logout();
             alert("تم تسجيل الخروج لانتهاء مهلة الجلسة (ساعة واحدة من الخمول)");
@@ -58,18 +59,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         window.addEventListener("mousemove", resetTimeout);
         window.addEventListener("keydown", resetTimeout);
         resetTimeout();
-        
-        return () => {
-          clearTimeout(timeout);
-          window.removeEventListener("mousemove", resetTimeout);
-          window.removeEventListener("keydown", resetTimeout);
-        };
       } else if (profile?.active === false) {
-        // If they were disabled while logged in
         logout();
       }
     }
     setLoading(false);
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+      if (resetTimeout) {
+        window.removeEventListener("mousemove", resetTimeout);
+        window.removeEventListener("keydown", resetTimeout);
+      }
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
