@@ -286,6 +286,27 @@ const Archive = () => {
 
   useEffect(() => { setCurrentPage(1); }, [searchText, filterDocType, filterDocYear, filterPId, filterSecId, filterDateFrom, filterDateTo, activeQuickFilter]);
 
+  const generateOutgoingNumber = useCallback((typeId: string, yearId: string) => {
+    if (!["1", "2", "5", "7"].includes(typeId) || !yearId) return "";
+    
+    const outgoingDocs = documents.filter(d => ["1", "2", "5", "7"].includes(d.docType) && d.docYear === yearId);
+    let maxSeq = 0;
+    outgoingDocs.forEach(d => {
+      if (d.docNum && d.docNum.includes("/")) {
+        const parts = d.docNum.split("/");
+        const numPart = parts[parts.length - 1];
+        const num = parseInt(numPart, 10);
+        if (!isNaN(num) && num > maxSeq) {
+          maxSeq = num;
+        }
+      }
+    });
+    
+    const nextSeq = String(maxSeq + 1).padStart(3, "0");
+    const prefix = typeId === "1" ? "ص" : (typeId === "2" ? "ص/س" : (typeId === "5" ? "ص/س/ش" : "ص/س/ل"));
+    return `${prefix}/${yearId}/${nextSeq}`;
+  }, [documents]);
+
   const handleSaveDoc = () => {
     if (!docForm.docType || !docForm.docYear || !docForm.docNum || !docForm.docSubj || !docForm.docDateCH) {
       toast({ title: "خطأ", description: "يرجى ملء الحقول المطلوبة: النوع، السنة، الرقم، الموضوع، التاريخ", variant: "destructive" });
@@ -743,7 +764,13 @@ const Archive = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <Label className="text-xs flex items-center gap-1"><Layers className="w-3 h-3" />نوع الوثيقة <span className="text-destructive">*</span></Label>
-                    <Select value={docForm.docType} onValueChange={(v) => setDocForm({ ...docForm, docType: v })}>
+                    <Select value={docForm.docType} onValueChange={(v) => {
+                      const newForm = { ...docForm, docType: v };
+                      if (["1", "2", "5", "7"].includes(v) && newForm.docYear) {
+                        newForm.docNum = generateOutgoingNumber(v, newForm.docYear);
+                      }
+                      setDocForm(newForm);
+                    }}>
                       <SelectTrigger><SelectValue placeholder="اختر النوع" /></SelectTrigger>
                       <SelectContent>
                         {docTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}
@@ -752,7 +779,13 @@ const Archive = () => {
                   </div>
                   <div>
                     <Label className="text-xs flex items-center gap-1"><Calendar className="w-3 h-3" />السنة <span className="text-destructive">*</span></Label>
-                    <Select value={docForm.docYear} onValueChange={(v) => setDocForm({ ...docForm, docYear: v })}>
+                    <Select value={docForm.docYear} onValueChange={(v) => {
+                      const newForm = { ...docForm, docYear: v };
+                      if (["1", "2", "5", "7"].includes(newForm.docType) && v) {
+                        newForm.docNum = generateOutgoingNumber(newForm.docType, v);
+                      }
+                      setDocForm(newForm);
+                    }}>
                       <SelectTrigger><SelectValue placeholder="اختر السنة" /></SelectTrigger>
                       <SelectContent>
                         {years.map(y => <SelectItem key={y.id} value={y.id}>{y.label}</SelectItem>)}

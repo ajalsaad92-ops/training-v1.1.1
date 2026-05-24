@@ -349,7 +349,10 @@ const Evaluation = () => {
                               e.stopPropagation();
                               const role = et.id === "trainee_evaluates_trainer" ? "trainee" : et.id === "trainer_evaluates_trainee" ? "trainer" : "supervisor";
                               const roleName = et.id === "trainee_evaluates_trainer" ? "المتدرب" : et.id === "trainer_evaluates_trainee" ? "المدرب" : "المشرف";
-                              setQrData({ url: `${window.location.origin}/survey/${c.id}/${role}`, title: c.title, roleName });
+                              const url = new URL(`${window.location.origin}/survey/${c.id}/${role}`);
+                              url.searchParams.set("name", c.title || "");
+                              url.searchParams.set("date", c.start_date || "");
+                              setQrData({ url: url.toString(), title: c.title, roleName });
                             }}>عرض الباركود</Button>
                             <StatusBadge status="مكتمل" variant="success" />
                           </div>

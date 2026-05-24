@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { localDb } from "@/lib/localStore";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,7 @@ import { CheckCircle2, Loader2, Star } from "lucide-react";
 
 export default function ExternalSurvey() {
   const { courseId, role } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [course, setCourse] = useState<any>(null);
@@ -22,15 +23,22 @@ export default function ExternalSurvey() {
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
-    // Check if course exists
-    const c = localDb.courses.getAll().find(c => c.id === courseId);
+    // Check if course exists in localDb first (if accessed from admin device)
+    const c = localDb.courses.getAll().find((c: any) => c.id === courseId);
     if (c) {
       setCourse(c);
+    } else {
+      // If accessed from a mobile device (external survey), try to construct it from URL params
+      const courseName = searchParams.get("name");
+      const courseDate = searchParams.get("date");
+      if (courseName) {
+        setCourse({ id: courseId, name: courseName, date: courseDate });
+      }
     }
     setLoading(false);
-  }, [courseId]);
+  }, [courseId, searchParams]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       toast({ title: "خطأ", description: "يرجى كتابة الاسم", variant: "destructive" });
@@ -41,20 +49,31 @@ export default function ExternalSurvey() {
       return;
     }
 
-    localDb.evaluations.insert({
-      course_id: courseId!,
-      evaluator_name: name,
-      evaluator_role: role === "trainee" ? "متدرب" : role === "trainer" ? "مدرب" : "مشرف",
-      scores: {
-        general: rating1,
-        specific: rating2
-      },
-      notes: notes,
-      is_external: true
-    });
+    try {
+      const { error } = await supabase
+        .from('evaluations')
+        .insert([
+          {
+            course_id: courseId!,
+            evaluator_name: name,
+            evaluator_role: role === "trainee" ? "متدرب" : role === "trainer" ? "مدرب" : "مشرف",
+            scores: {
+              general: rating1,
+              specific: rating2
+            },
+            notes: notes,
+            is_external: true
+          }
+        ]);
 
-    toast({ title: "تم", description: "شكراً لك! تم إرسال التقييم بنجاح." });
-    setSubmitted(true);
+      if (error) throw error;
+
+      toast({ title: "تم", description: "شكراً لك! تم إرسال التقييم بنجاح." });
+      setSubmitted(true);
+    } catch (error: any) {
+      console.error('Error submitting evaluation:', error);
+      toast({ title: "خطأ", description: "حدث خطأ أثناء إرسال التقييم، يرجى المحاولة مرة أخرى.", variant: "destructive" });
+    }
   };
 
   if (loading) return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin w-8 h-8 text-primary" /></div>;
@@ -106,8 +125,8 @@ export default function ExternalSurvey() {
       <div className="bg-card border border-border rounded-3xl shadow-xl max-w-md w-full overflow-hidden animate-slide-up">
         <div className="bg-primary/10 p-6 border-b border-border/50 text-center">
           <h1 className="text-xl font-bold text-primary mb-1">{getRoleLabel()}</h1>
-          <h2 className="text-sm text-foreground font-semibold truncate">{course.name}</h2>
-          <p className="text-xs text-muted-foreground mt-1">{course.date}</p>
+          <h2 className="text-sm text-foreground font-semibold truncate">{course.name || course.title}</h2>
+          <p className="text-xs text-muted-foreground mt-1">{course.date || course.start_date}</p>
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 space-y-6">

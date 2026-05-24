@@ -137,6 +137,16 @@ const Tasks = () => {
     }
   }, [tasks, searchParams, setSearchParams]);
 
+  useEffect(() => {
+    if (showDetail) {
+      const task = tasks.find(t => t.id === showDetail);
+      if (task && task.assigned_to === userId && !task.viewed_at) {
+        localDb.tasks.update(task.id, { viewed_at: new Date().toISOString() });
+        refetch();
+      }
+    }
+  }, [showDetail, tasks, userId, refetch]);
+
   const baseVisibleTasks = tasks.filter(t => {
     if (isManager || isAdmin) return true;
     if (isIndividual) return t.unit === section || t.assigned_to === userId;
@@ -831,6 +841,12 @@ const Tasks = () => {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{ename(selectedTask.assigned_to)}</p>
                   <p className="text-[10px] text-muted-foreground">{selectedTask.unit} · {selectedTask.estimated_hours ? `${selectedTask.estimated_hours} س` : "-"}</p>
+                  {selectedTask.viewed_at && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                      <Eye className="w-3 h-3" />
+                      شوهد: {new Date(selectedTask.viewed_at).toLocaleString("ar-IQ", { dateStyle: "short", timeStyle: "short" })}
+                    </p>
+                  )}
                 </div>
                 {(selectedTask.achievement_points || 0) > 0 && (
                   <Badge variant="secondary" className="gap-0.5"><Zap className="w-3 h-3 text-warning" />{selectedTask.achievement_points}</Badge>

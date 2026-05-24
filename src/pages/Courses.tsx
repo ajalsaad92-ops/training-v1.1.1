@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { QRCodeSVG } from "qrcode.react";
 
 const courseStatusLabels: Record<string, string> = { active: "نشطة", completed: "منتهية", planned: "مخططة" };
 
@@ -43,6 +44,7 @@ const Courses = () => {
   const [saving, setSaving] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [qrData, setQrData] = useState<{url: string, title: string, roleName: string} | null>(null);
 
   useEffect(() => {
     const focusId = searchParams.get("focus");
@@ -465,6 +467,31 @@ const Courses = () => {
                   </div>
                 )}
               </div>
+              
+              <div className="bg-muted/30 rounded-xl p-4 border border-border">
+                <h4 className="font-bold text-foreground mb-3 flex items-center gap-2"><QrCode className="w-4 h-4 text-primary" />استمارات التقييم (باركود)</h4>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => {
+                    const url = new URL(`${window.location.origin}/survey/${selectedCourse.id}/trainee`);
+                    url.searchParams.set("name", selectedCourse.title || "");
+                    url.searchParams.set("date", selectedCourse.start_date || "");
+                    setQrData({ url: url.toString(), title: selectedCourse.title, roleName: "المتدرب يقيم المدرب" });
+                  }}>تقييم المتدرب للمدرب</Button>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    const url = new URL(`${window.location.origin}/survey/${selectedCourse.id}/trainer`);
+                    url.searchParams.set("name", selectedCourse.title || "");
+                    url.searchParams.set("date", selectedCourse.start_date || "");
+                    setQrData({ url: url.toString(), title: selectedCourse.title, roleName: "المدرب يقيم المتدرب" });
+                  }}>تقييم المدرب للمتدرب</Button>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    const url = new URL(`${window.location.origin}/survey/${selectedCourse.id}/supervisor`);
+                    url.searchParams.set("name", selectedCourse.title || "");
+                    url.searchParams.set("date", selectedCourse.start_date || "");
+                    setQrData({ url: url.toString(), title: selectedCourse.title, roleName: "المشرف يقيم الدورة" });
+                  }}>تقييم المشرف</Button>
+                </div>
+              </div>
+
               <div>
                 <h4 className="font-bold text-foreground mb-3 flex items-center gap-2"><User className="w-4 h-4 text-primary" />المتدربون ({(selectedCourse.trainees || []).length})</h4>
                 {(selectedCourse.trainees || []).length > 0 ? (
@@ -511,6 +538,21 @@ const Courses = () => {
             <p className="text-lg font-bold text-foreground">{selectedCourse?.title}</p>
             <div className="pt-4 flex justify-center"><div className="w-24 h-24 border-2 border-dashed border-muted-foreground/30 rounded-lg flex items-center justify-center"><QrCode className="w-12 h-12 text-muted-foreground/40" /></div></div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!qrData} onOpenChange={() => setQrData(null)}>
+        <DialogContent className="max-w-sm flex flex-col items-center justify-center p-6" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-center">استمارة: {qrData?.roleName}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm font-bold text-primary mb-4">{qrData?.title}</p>
+          {qrData && (
+            <div className="bg-white p-4 rounded-xl border border-border shadow-sm mb-4">
+              <QRCodeSVG value={qrData.url} size={200} level="M" />
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground text-center">امسح الباركود للوصول إلى الاستمارة والمشاركة في التقييم عبر الشبكة.</p>
         </DialogContent>
       </Dialog>
     </div>
