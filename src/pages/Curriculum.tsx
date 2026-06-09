@@ -104,7 +104,7 @@ const Curriculum = () => {
   const dashboardFilter = searchParams.get("filter") || "";
   const { data: items, loading, refetch } = useCurriculumItems();
   const { data: employees } = useEmployees();
-  const { canEditCurriculum, userName, isIndividual, has } = useUserRole();
+  const { canEditCurriculum, userName, userId, isIndividual, has } = useUserRole();
   const [viewMode, setViewMode] = useState<"all" | "curriculum" | "ppt">(
     initialPptStage ? "ppt" : initialStage ? "curriculum" : initialTab === "ppt" ? "ppt" : initialTab === "curriculum" ? "curriculum" : "all"
   );
