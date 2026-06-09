@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { localDb } from "@/lib/localStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
