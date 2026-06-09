@@ -47,7 +47,12 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
   const { data: requests, loading: reqLoading, refetch } = useHRRequests();
   const { data: employees, loading: empLoading } = useEmployees();
   const { user } = useAuth();
-  const { isIndividual, isUnitHead, isManager, isAdmin, section } = useUserRole();
+  const { isIndividual, isUnitHead, isManager, isAdmin, section, has, userId } = useUserRole();
+
+  // Approval permissions (must match HR page gating)
+  const canUnitApprove = isUnitHead && !isManager && !isAdmin && has("approve_hr_unit");
+  const canDeptApprove = (isManager || isAdmin) && has("approve_hr_dept");
+  const canApprove = canUnitApprove || canDeptApprove;
   const [activeDialog, setActiveDialog] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<"all" | "individual" | "group">("all");
   const [selectedEmployee, setSelectedEmployee] = useState("");
