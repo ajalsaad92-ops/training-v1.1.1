@@ -445,14 +445,14 @@ const HRAttendance = () => {
         insertPayload.unit_head_at = new Date().toISOString();
         insertPayload.approval_status = "unit_approved";
       }
-      localDb.hrRequests.insert(insertPayload);
+      const inserted = localDb.hrRequests.insert(insertPayload);
       if (!isSubmitterManager) {
         const emp = employees.find(e => e.name === leaveForm.employee_name);
         const empSec = emp?.section || "";
         const s2u = (s: string) => s.includes("ناهج") ? "المناهج" : s.includes("داد") || s.includes("تدريب") ? "الإعداد" : s;
         const unitHead = localDb.profiles.getAll().find((p: any) => p.roles?.some((r: string) => r.includes("unit_head")) && s2u(p.section || "") === s2u(empSec));
         if (unitHead) {
-          localDb.notifications.insert({ user_id: unitHead.id, message: `طلب جديد: ${leaveForm.employee_name} (${leaveForm.type})`, type: "info", link: "/hr" });
+          localDb.notifications.insert({ user_id: unitHead.id, message: `طلب جديد: ${leaveForm.employee_name} (${leaveForm.type})`, type: "info", link: `/hr?req=${inserted?.id || ""}` });
         }
       }
     }
