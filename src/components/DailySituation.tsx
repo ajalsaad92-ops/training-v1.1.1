@@ -47,7 +47,12 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
   const { data: requests, loading: reqLoading, refetch } = useHRRequests();
   const { data: employees, loading: empLoading } = useEmployees();
   const { user } = useAuth();
-  const { isIndividual, isUnitHead, isManager, isAdmin, section } = useUserRole();
+  const { isIndividual, isUnitHead, isManager, isAdmin, section, has, userId } = useUserRole();
+
+  // Approval permissions (must match HR page gating)
+  const canUnitApprove = isUnitHead && !isManager && !isAdmin && has("approve_hr_unit");
+  const canDeptApprove = (isManager || isAdmin) && has("approve_hr_dept");
+  const canApprove = canUnitApprove || canDeptApprove;
   const [activeDialog, setActiveDialog] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<"all" | "individual" | "group">("all");
   const [selectedEmployee, setSelectedEmployee] = useState("");
@@ -129,26 +134,44 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
 
   // Handlers
   const handleApprove = async (id: string, level: "unit" | "dept") => {
-    const newStatus = level === "unit" ? "unit_approved" : "approved";
-    localDb.hrRequests.update(id, { approval_status: newStatus });
-    toast({ title: "تم", description: newStatus === "approved" ? "تمت الموافقة النهائية" : "تمت موافقة رئيس الشعبة" });
+    const req = requests.find(r => r.id === id);
+    if (req?.created_by === userId) { toast({ title: "خطأ", description: "لا يمكنك الموافقة على طلبك", variant: "destructive" }); return; }
+    if (level === "unit") {
+      if (!canUnitApprove) return;
+      localDb.hrRequests.update(id, { approval_status: "unit_approved", unit_head_status: "approved", unit_head_by: userId, unit_head_at: new Date().toISOString() });
+      toast({ title: "تم", description: "تمت موافقة رئيس الشعبة" });
+    } else {
+      if (!canDeptApprove) return;
+      localDb.hrRequests.update(id, { approval_status: "approved", dept_manager_status: "approved", dept_manager_by: userId, dept_manager_at: new Date().toISOString() });
+      toast({ title: "تم", description: "تمت الموافقة النهائية" });
+    }
     refetch();
   };
 
   const handleReject = async (id: string) => {
-    localDb.hrRequests.update(id, { approval_status: "rejected" });
+    const req = requests.find(r => r.id === id);
+    if (req?.created_by === userId) { toast({ title: "خطأ", description: "لا يمكنك رفض طلبك", variant: "destructive" }); return; }
+    if (!canApprove) return;
+    const patch: Record<string, unknown> = { approval_status: "rejected" };
+    if (canDeptApprove) { patch.dept_manager_status = "rejected"; patch.dept_manager_by = userId; patch.dept_manager_at = new Date().toISOString(); }
+    else { patch.unit_head_status = "rejected"; patch.unit_head_by = userId; patch.unit_head_at = new Date().toISOString(); }
+    localDb.hrRequests.update(id, patch);
     toast({ title: "تم", description: "تم رفض الطلب" });
     refetch();
   };
 
   const handleUndo = async (id: string) => {
-    localDb.hrRequests.update(id, { approval_status: "pending" });
+    if (!canDeptApprove || !has("undo_hr_decision")) return;
+    localDb.hrRequests.update(id, { approval_status: "pending", unit_head_status: "pending", unit_head_by: null, unit_head_at: null, dept_manager_status: "pending", dept_manager_by: null, dept_manager_at: null });
     toast({ title: "تم", description: "تم التراجع عن القرار وإعادة الطلب للمعلّق" });
     refetch();
   };
 
   const handleManagerOverride = async (id: string) => {
-    localDb.hrRequests.update(id, { approval_status: "approved" });
+    const req = requests.find(r => r.id === id);
+    if (req?.created_by === userId) { toast({ title: "خطأ", description: "لا يمكنك الموافقة على طلبك", variant: "destructive" }); return; }
+    if (!canDeptApprove) return;
+    localDb.hrRequests.update(id, { approval_status: "approved", unit_head_status: "approved", unit_head_by: userId, unit_head_at: new Date().toISOString(), dept_manager_status: "approved", dept_manager_by: userId, dept_manager_at: new Date().toISOString() });
     toast({ title: "تم", description: "تمت الموافقة النهائية (صلاحية المدير)" });
     refetch();
   };
@@ -193,26 +216,36 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
     return <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
 
-  const renderRequestActions = (req: HRRequest) => (
-    <div className="flex gap-1 flex-wrap no-print">
-      {req.approval_status === "pending" && (
-        <>
-          <button onClick={() => handleApprove(req.id, "unit")} className="p-1.5 rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors" title="موافقة رئيس الشعبة"><Check className="w-3.5 h-3.5" /></button>
-          <button onClick={() => handleReject(req.id)} className="p-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="رفض"><X className="w-3.5 h-3.5" /></button>
-          <button onClick={() => handleManagerOverride(req.id)} className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="موافقة مباشرة (مدير)"><Check className="w-3.5 h-3.5" strokeWidth={3} /></button>
-        </>
-      )}
-      {req.approval_status === "unit_approved" && (
-        <>
-          <button onClick={() => handleApprove(req.id, "dept")} className="p-1.5 rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors" title="موافقة نهائية"><Check className="w-3.5 h-3.5" /></button>
-          <button onClick={() => handleReject(req.id)} className="p-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="رفض"><X className="w-3.5 h-3.5" /></button>
-        </>
-      )}
-      {(req.approval_status === "approved" || req.approval_status === "rejected") && (
-        <button onClick={() => handleUndo(req.id)} className="p-1.5 rounded-md bg-warning/10 text-warning hover:bg-warning/20 transition-colors" title="تراجع"><Undo2 className="w-3.5 h-3.5" /></button>
-      )}
-    </div>
-  );
+  const renderRequestActions = (req: HRRequest) => {
+    const isRequester = req.created_by === userId;
+    // Only unit heads / managers (with the right permission) can act, and never on their own request
+    if (!canApprove || isRequester) return null;
+    return (
+      <div className="flex gap-1 flex-wrap no-print">
+        {req.approval_status === "pending" && (
+          <>
+            {canUnitApprove && (
+              <button onClick={() => handleApprove(req.id, "unit")} className="p-1.5 rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors" title="موافقة رئيس الشعبة"><Check className="w-3.5 h-3.5" /></button>
+            )}
+            {canDeptApprove && (
+              <button onClick={() => handleManagerOverride(req.id)} className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="موافقة مباشرة (مدير)"><Check className="w-3.5 h-3.5" strokeWidth={3} /></button>
+            )}
+            <button onClick={() => handleReject(req.id)} className="p-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="رفض"><X className="w-3.5 h-3.5" /></button>
+          </>
+        )}
+        {req.approval_status === "unit_approved" && canDeptApprove && (
+          <>
+            <button onClick={() => handleApprove(req.id, "dept")} className="p-1.5 rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors" title="موافقة نهائية"><Check className="w-3.5 h-3.5" /></button>
+            <button onClick={() => handleReject(req.id)} className="p-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="رفض"><X className="w-3.5 h-3.5" /></button>
+          </>
+        )}
+        {(req.approval_status === "approved" || req.approval_status === "rejected") && canDeptApprove && has("undo_hr_decision") && (
+          <button onClick={() => handleUndo(req.id)} className="p-1.5 rounded-md bg-warning/10 text-warning hover:bg-warning/20 transition-colors" title="تراجع"><Undo2 className="w-3.5 h-3.5" /></button>
+        )}
+      </div>
+    );
+  };
+
 
   return (
     <div className={embedded ? "space-y-2" : "space-y-5"}>
@@ -320,7 +353,7 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
       </div>
 
       {/* Pending Requests Table - hide in embedded mode */}
-      {!embedded && pendingRequests.length > 0 && (
+      {!embedded && canApprove && pendingRequests.length > 0 && (
         <div data-print-section="pending_requests" className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="px-4 py-3 bg-warning/5 border-b border-border">
             <h3 className="text-sm font-bold text-foreground">طلبات بانتظار الإجراء ({pendingRequests.length})</h3>
@@ -345,7 +378,7 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
       )}
 
       {/* Recently processed requests with undo - hide in embedded mode */}
-      {!embedded && monthRequests.filter(r => r.approval_status === "approved" || r.approval_status === "rejected").length > 0 && (
+      {!embedded && canApprove && monthRequests.filter(r => r.approval_status === "approved" || r.approval_status === "rejected").length > 0 && (
         <div className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="px-4 py-3 bg-muted/50 border-b border-border">
             <h3 className="text-sm font-bold text-foreground">طلبات تم معالجتها (مع إمكانية التراجع)</h3>

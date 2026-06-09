@@ -18,7 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Users, Search, Check, X, Eye, Loader2, Undo2, CalendarPlus, MessageSquare, Send, ChevronDown, ChevronUp, EyeOff, UserCheck, Briefcase, Clock, AlertCircle } from "lucide-react";
 
 type HistoryEntry = {
@@ -78,6 +79,22 @@ const HRAttendance = () => {
   const [undoTarget, setUndoTarget] = useState<{ id: string; level: "unit" | "dept" } | null>(null);
   const [undoReason, setUndoReason] = useState("");
   const [commentDraft, setCommentDraft] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Deep-link: open a specific request dialog when arriving from a notification (/hr?req=ID)
+  useEffect(() => {
+    const reqId = searchParams.get("req");
+    if (!reqId || loading) return;
+    const found = requests.find(r => r.id === reqId);
+    if (found) {
+      setSelectedRequest(found);
+      const next = new URLSearchParams(searchParams);
+      next.delete("req");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, requests, loading, setSearchParams]);
+
+
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -192,7 +209,7 @@ const HRAttendance = () => {
       unit_head_at: new Date().toISOString(),
       history,
     });
-    if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `وافق رئيس الشعبة على طلبك (${req.type})`, type: "info", link: "/hr" });
+    if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `وافق رئيس الشعبة على طلبك (${req.type})`, type: "info", link: `/hr?req=${req.id}` });
     await logAction(userName, "موافقة رئيس شعبة", `طلب ${id}`);
     toast({ title: "تم", description: "تمت موافقة رئيس الشعبة" });
     refetch();
@@ -213,7 +230,7 @@ const HRAttendance = () => {
       unit_head_at: new Date().toISOString(),
       history,
     });
-    if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `رفض رئيس الشعبة طلبك (${req.type})${reason ? " — " + reason : ""}`, type: "warning", link: "/hr" });
+    if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `رفض رئيس الشعبة طلبك (${req.type})${reason ? " — " + reason : ""}`, type: "warning", link: `/hr?req=${req.id}` });
     await logAction(userName, "رفض رئيس شعبة", `طلب ${id}`);
     toast({ title: "تم", description: "تم رفض الطلب" });
     refetch();
@@ -234,7 +251,7 @@ const HRAttendance = () => {
       dept_manager_at: new Date().toISOString(),
       history,
     });
-    if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `تمت الموافقة النهائية على طلبك (${req.type})`, type: "info", link: "/hr" });
+    if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `تمت الموافقة النهائية على طلبك (${req.type})`, type: "info", link: `/hr?req=${req.id}` });
     await logAction(userName, "موافقة نهائية", `طلب ${id}`);
     toast({ title: "تم", description: "تمت الموافقة النهائية" });
     refetch();
@@ -255,7 +272,7 @@ const HRAttendance = () => {
       dept_manager_at: new Date().toISOString(),
       history,
     });
-    if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `رفض مدير القسم طلبك (${req.type})${reason ? " — " + reason : ""}`, type: "warning", link: "/hr" });
+    if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `رفض مدير القسم طلبك (${req.type})${reason ? " — " + reason : ""}`, type: "warning", link: `/hr?req=${req.id}` });
     await logAction(userName, "رفض مدير القسم", `طلب ${id}`);
     toast({ title: "تم", description: "تم رفض الطلب" });
     refetch();
@@ -279,11 +296,11 @@ const HRAttendance = () => {
       dept_manager_at: new Date().toISOString(),
       history,
     });
-    if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `تمت الموافقة على طلبك مباشرة من مدير القسم (${req.type})`, type: "info", link: "/hr" });
+    if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `تمت الموافقة على طلبك مباشرة من مدير القسم (${req.type})`, type: "info", link: `/hr?req=${req.id}` });
     const emp = allEmployees.find(e => e.name === req.employee_name);
     const sectionHeads = allEmployees.filter(e => (e.roles?.includes("unit_head") || e.roles?.includes("curriculum_unit_head") || e.roles?.includes("prep_unit_head")) && e.section === emp?.section && e.id !== userId);
     sectionHeads.forEach(head => {
-      localDb.notifications.insert({ user_id: head.id, message: `تمت الموافقة المباشرة من مدير القسم على طلب ${req.employee_name} (${req.type})`, type: "info", link: "/hr" });
+      localDb.notifications.insert({ user_id: head.id, message: `تمت الموافقة المباشرة من مدير القسم على طلب ${req.employee_name} (${req.type})`, type: "info", link: `/hr?req=${req.id}` });
     });
     await logAction(userName, "موافقة مباشرة (مدير)", `طلب ${id}`);
     toast({ title: "تم", description: "تمت الموافقة النهائية (صلاحية المدير)" });
@@ -315,7 +332,7 @@ const HRAttendance = () => {
       reset.dept_manager_at = null;
     }
     localDb.hrRequests.update(undoTarget.id, reset);
-    if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `تم التراجع عن قرار سابق على طلبك (${req.type}) — السبب: ${reason}`, type: "warning", link: "/hr" });
+    if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `تم التراجع عن قرار سابق على طلبك (${req.type}) — السبب: ${reason}`, type: "warning", link: `/hr?req=${req.id}` });
     await logAction(userName, "تراجع عن قرار", `طلب ${undoTarget.id} — ${reason}`);
     toast({ title: "تم", description: "تم تسجيل التراجع وسببه" });
     setUndoTarget(null);
@@ -428,14 +445,14 @@ const HRAttendance = () => {
         insertPayload.unit_head_at = new Date().toISOString();
         insertPayload.approval_status = "unit_approved";
       }
-      localDb.hrRequests.insert(insertPayload);
+      const inserted = localDb.hrRequests.insert(insertPayload);
       if (!isSubmitterManager) {
         const emp = employees.find(e => e.name === leaveForm.employee_name);
         const empSec = emp?.section || "";
         const s2u = (s: string) => s.includes("ناهج") ? "المناهج" : s.includes("داد") || s.includes("تدريب") ? "الإعداد" : s;
         const unitHead = localDb.profiles.getAll().find((p: any) => p.roles?.some((r: string) => r.includes("unit_head")) && s2u(p.section || "") === s2u(empSec));
         if (unitHead) {
-          localDb.notifications.insert({ user_id: unitHead.id, message: `طلب جديد: ${leaveForm.employee_name} (${leaveForm.type})`, type: "info", link: "/hr" });
+          localDb.notifications.insert({ user_id: unitHead.id, message: `طلب جديد: ${leaveForm.employee_name} (${leaveForm.type})`, type: "info", link: `/hr?req=${inserted?.id || ""}` });
         }
       }
     }
@@ -469,13 +486,13 @@ const HRAttendance = () => {
     if (!req) return;
     const history = appendHistory(req, { kind: "opinion_request", action: "طلب بيان رأي" });
     localDb.hrRequests.update(id, { opinion_requested: true, opinion_requested_by: userId, opinion_requested_at: new Date().toISOString(), history });
-    if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `طُلب بيان رأي على طلبك (${req.type})`, type: "info", link: "/hr" });
+    if (req?.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `طُلب بيان رأي على طلبك (${req.type})`, type: "info", link: `/hr?req=${req.id}` });
     const emp = employees.find(e => e.name === req.employee_name);
     const empSec = emp?.section || "";
     const s2u = (s: string) => s.includes("ناهج") ? "المناهج" : s.includes("داد") || s.includes("تدريب") ? "الإعداد" : s;
     const unitHead = localDb.profiles.getAll().find((p: any) => p.roles?.some((r: string) => r.includes("unit_head")) && s2u(p.section || "") === s2u(empSec));
     if (unitHead) {
-      localDb.notifications.insert({ user_id: unitHead.id, message: `مطلوب بيان رأيك بخصوص طلب إجازة: ${req.employee_name}`, type: "warning", link: "/hr" });
+      localDb.notifications.insert({ user_id: unitHead.id, message: `مطلوب بيان رأيك بخصوص طلب إجازة: ${req.employee_name}`, type: "warning", link: `/hr?req=${req.id}` });
     }
     await logAction(userName, "طلب بيان رأي", `طلب ${id}`);
     toast({ title: "تم", description: "تم إرسال طلب بيان الرأي إلى مسؤول الشعبة" });
@@ -499,7 +516,7 @@ const HRAttendance = () => {
     if (!txt) { toast({ title: "خطأ", description: "اكتب التعليق أولاً", variant: "destructive" }); return; }
     const history = appendHistory(req, { kind: "comment", action: "تعليق", text: txt, hidden_from_employee: hidden });
     localDb.hrRequests.update(req.id, { history });
-    if (!hidden && req.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `تعليق جديد على طلبك (${req.type})`, type: "info", link: "/hr" });
+    if (!hidden && req.created_by) localDb.notifications.insert({ user_id: req.created_by, message: `تعليق جديد على طلبك (${req.type})`, type: "info", link: `/hr?req=${req.id}` });
     await logAction(userName, "إضافة تعليق", `طلب ${req.id}`);
     setCommentDraft("");
     setSelectedRequest({ ...req, history });
@@ -739,7 +756,7 @@ const HRAttendance = () => {
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="بحث بالاسم أو النوع..." className="ps-9" />
         </div>
         <Button size="sm" className="gap-2 animate-scale-in" onClick={() => {
-          setLeaveForm({ employee_name: isIndividual ? userName : "", type: "إجازة اعتيادية", date: new Date().toISOString().split("T")[0], notes: "", department: "", hours: "1" });
+          setLeaveForm({ employee_name: isIndividual ? userName : "", type: "إجازة اعتيادية", date: new Date().toISOString().split("T")[0], end_date: "", notes: "", department: "", hours: "1" });
           setShowLeaveForm(true);
         }}>
           <CalendarPlus className="w-4 h-4" />رفع طلب إجازة
