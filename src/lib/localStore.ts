@@ -672,6 +672,7 @@ export const localDb = {
     getById: (id: string) => getAll<UserProfile>("profiles").find(p => p.id === id) || null,
     insert: (p: Partial<UserProfile>) => insertItem<UserProfile>("profiles", p as UserProfile),
     update: (id: string, u: Partial<UserProfile>) => updateItem<UserProfile>("profiles", id, u),
+    delete: (id: string) => deleteItem<UserProfile>("profiles", id),
   },
   userAccounts: {
     getAll: () => getAll<UserAccount>("userAccounts"),
@@ -684,6 +685,21 @@ export const localDb = {
       s.userAccounts[idx] = { ...s.userAccounts[idx], ...updates };
       saveStore();
       return s.userAccounts[idx];
+    },
+    update: (idOrEmail: string, updates: Partial<UserAccount>) => {
+      const s = getStore();
+      const idx = s.userAccounts.findIndex(a => a.id === idOrEmail || a.email === idOrEmail || a.profile?.id === idOrEmail);
+      if (idx === -1) return null;
+      s.userAccounts[idx] = { ...s.userAccounts[idx], ...updates };
+      saveStore();
+      return s.userAccounts[idx];
+    },
+    delete: (idOrEmail: string) => {
+      const s = getStore();
+      const before = s.userAccounts.length;
+      s.userAccounts = s.userAccounts.filter(a => a.id !== idOrEmail && a.email !== idOrEmail && a.profile?.id !== idOrEmail);
+      saveStore();
+      return s.userAccounts.length < before;
     },
   },
   governorateTraining: {
