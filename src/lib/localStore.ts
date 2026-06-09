@@ -632,6 +632,7 @@ export const localDb = {
     getAll: () => getAll<CorrespondenceItem>("correspondence"),
     insert: (c: Partial<CorrespondenceItem>) => insertItem<CorrespondenceItem>("correspondence", { created_at: now(), updated_at: now(), ...c } as CorrespondenceItem),
     update: (id: string, u: Partial<CorrespondenceItem>) => updateItem<CorrespondenceItem>("correspondence", id, { updated_at: now(), ...u } as Partial<CorrespondenceItem>),
+    delete: (id: string) => deleteItem<CorrespondenceItem>("correspondence", id),
   },
   tasks: {
     getAll: () => getAll<Task>("tasks"),
