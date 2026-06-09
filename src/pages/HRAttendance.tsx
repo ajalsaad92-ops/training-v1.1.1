@@ -18,7 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Users, Search, Check, X, Eye, Loader2, Undo2, CalendarPlus, MessageSquare, Send, ChevronDown, ChevronUp, EyeOff, UserCheck, Briefcase, Clock, AlertCircle } from "lucide-react";
 
 type HistoryEntry = {
