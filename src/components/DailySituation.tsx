@@ -378,7 +378,7 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
       )}
 
       {/* Recently processed requests with undo - hide in embedded mode */}
-      {!embedded && monthRequests.filter(r => r.approval_status === "approved" || r.approval_status === "rejected").length > 0 && (
+      {!embedded && canApprove && monthRequests.filter(r => r.approval_status === "approved" || r.approval_status === "rejected").length > 0 && (
         <div className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="px-4 py-3 bg-muted/50 border-b border-border">
             <h3 className="text-sm font-bold text-foreground">طلبات تم معالجتها (مع إمكانية التراجع)</h3>
