@@ -153,7 +153,7 @@ const ManagerDashboard = () => {
       localDb.hrRequests.update(id, { approval_status: "rejected", dept_manager_status: "rejected", dept_manager_by: userId, dept_manager_at: new Date().toISOString(), history });
     }
     if (req.created_by) {
-      localDb.notifications.insert({ user_id: req.created_by, message: action === "approve" ? `تمت الموافقة النهائية على طلبك (${req.type})` : `تم رفض طلبك (${req.type})`, type: action === "approve" ? "info" : "warning", link: "/hr" });
+      localDb.notifications.insert({ user_id: req.created_by, message: action === "approve" ? `تمت الموافقة النهائية على طلبك (${req.type})` : `تم رفض طلبك (${req.type})`, type: action === "approve" ? "info" : "warning", link: `/hr?req=${req.id}` });
     }
     toast({ title: action === "approve" ? "تمت الموافقة" : "تم الرفض" });
     refetchHR();
