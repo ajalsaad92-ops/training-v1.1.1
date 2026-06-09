@@ -375,6 +375,7 @@ export default function TrainingPlan() {
       toast({ title: "خطأ", description: "ليس لديك صلاحية حذف بيانات المحافظة", variant: "destructive" });
       return;
     }
+    if (!confirm("هل أنت متأكد من حذف بيانات هذه المحافظة؟")) return;
     localDb.governorateTraining.delete(id);
     refreshData();
     toast({ title: "تم حذف البيانات" });
@@ -393,6 +394,10 @@ export default function TrainingPlan() {
   };
 
   const saveWeek = () => {
+    if (!has(editingWeek ? "edit_governorate_training" : "add_governorate_training")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية حفظ بيانات الأسبوع", variant: "destructive" });
+      return;
+    }
     const data = { ...weekForm, week: Number(weekForm.week) || 1 };
     if (editingWeek) {
       localDb.weekSchedules.update(editingWeek.id, data);
@@ -405,6 +410,11 @@ export default function TrainingPlan() {
   };
 
   const deleteWeek = (id: string) => {
+    if (!has("edit_governorate_training")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية حذف الأسبوع", variant: "destructive" });
+      return;
+    }
+    if (!confirm("هل أنت متأكد من حذف هذا الأسبوع؟")) return;
     localDb.weekSchedules.delete(id);
     refreshData();
     toast({ title: "تم حذف الأسبوع" });
