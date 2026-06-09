@@ -134,26 +134,44 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
 
   // Handlers
   const handleApprove = async (id: string, level: "unit" | "dept") => {
-    const newStatus = level === "unit" ? "unit_approved" : "approved";
-    localDb.hrRequests.update(id, { approval_status: newStatus });
-    toast({ title: "تم", description: newStatus === "approved" ? "تمت الموافقة النهائية" : "تمت موافقة رئيس الشعبة" });
+    const req = requests.find(r => r.id === id);
+    if (req?.created_by === userId) { toast({ title: "خطأ", description: "لا يمكنك الموافقة على طلبك", variant: "destructive" }); return; }
+    if (level === "unit") {
+      if (!canUnitApprove) return;
+      localDb.hrRequests.update(id, { approval_status: "unit_approved", unit_head_status: "approved", unit_head_by: userId, unit_head_at: new Date().toISOString() });
+      toast({ title: "تم", description: "تمت موافقة رئيس الشعبة" });
+    } else {
+      if (!canDeptApprove) return;
+      localDb.hrRequests.update(id, { approval_status: "approved", dept_manager_status: "approved", dept_manager_by: userId, dept_manager_at: new Date().toISOString() });
+      toast({ title: "تم", description: "تمت الموافقة النهائية" });
+    }
     refetch();
   };
 
   const handleReject = async (id: string) => {
-    localDb.hrRequests.update(id, { approval_status: "rejected" });
+    const req = requests.find(r => r.id === id);
+    if (req?.created_by === userId) { toast({ title: "خطأ", description: "لا يمكنك رفض طلبك", variant: "destructive" }); return; }
+    if (!canApprove) return;
+    const patch: Record<string, unknown> = { approval_status: "rejected" };
+    if (canDeptApprove) { patch.dept_manager_status = "rejected"; patch.dept_manager_by = userId; patch.dept_manager_at = new Date().toISOString(); }
+    else { patch.unit_head_status = "rejected"; patch.unit_head_by = userId; patch.unit_head_at = new Date().toISOString(); }
+    localDb.hrRequests.update(id, patch);
     toast({ title: "تم", description: "تم رفض الطلب" });
     refetch();
   };
 
   const handleUndo = async (id: string) => {
-    localDb.hrRequests.update(id, { approval_status: "pending" });
+    if (!canDeptApprove || !has("undo_hr_decision")) return;
+    localDb.hrRequests.update(id, { approval_status: "pending", unit_head_status: "pending", unit_head_by: null, unit_head_at: null, dept_manager_status: "pending", dept_manager_by: null, dept_manager_at: null });
     toast({ title: "تم", description: "تم التراجع عن القرار وإعادة الطلب للمعلّق" });
     refetch();
   };
 
   const handleManagerOverride = async (id: string) => {
-    localDb.hrRequests.update(id, { approval_status: "approved" });
+    const req = requests.find(r => r.id === id);
+    if (req?.created_by === userId) { toast({ title: "خطأ", description: "لا يمكنك الموافقة على طلبك", variant: "destructive" }); return; }
+    if (!canDeptApprove) return;
+    localDb.hrRequests.update(id, { approval_status: "approved", unit_head_status: "approved", unit_head_by: userId, unit_head_at: new Date().toISOString(), dept_manager_status: "approved", dept_manager_by: userId, dept_manager_at: new Date().toISOString() });
     toast({ title: "تم", description: "تمت الموافقة النهائية (صلاحية المدير)" });
     refetch();
   };
