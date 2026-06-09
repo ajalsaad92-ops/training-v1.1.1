@@ -353,7 +353,7 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
       </div>
 
       {/* Pending Requests Table - hide in embedded mode */}
-      {!embedded && pendingRequests.length > 0 && (
+      {!embedded && canApprove && pendingRequests.length > 0 && (
         <div data-print-section="pending_requests" className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="px-4 py-3 bg-warning/5 border-b border-border">
             <h3 className="text-sm font-bold text-foreground">طلبات بانتظار الإجراء ({pendingRequests.length})</h3>
