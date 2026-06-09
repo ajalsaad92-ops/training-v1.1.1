@@ -41,6 +41,10 @@ const Correspondence = () => {
   });
 
   const handleSave = async () => {
+    if (!has("add_correspondence")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية إضافة مراسلة", variant: "destructive" });
+      return;
+    }
     const result = correspondenceSchema.safeParse({ ...form, date: form.date || new Date().toISOString().split("T")[0] });
     if (!result.success) {
       toast({ title: "خطأ", description: result.error.errors[0].message, variant: "destructive" });
@@ -208,7 +212,13 @@ const Correspondence = () => {
                 <div key={label}><p className="text-muted-foreground text-xs">{label}</p><p className="font-medium text-foreground">{value}</p></div>
               ))}
               <div><p className="text-muted-foreground text-xs">الحالة</p>
-                <Select value={selected.status} onValueChange={(v) => { localDb.correspondence.update(selected.id, { status: v }); setSelected({ ...selected, status: v }); refetch(); }}>
+                <Select value={selected.status} onValueChange={(v) => {
+                  if (!has("edit_correspondence")) {
+                    toast({ title: "خطأ", description: "ليس لديك صلاحية تغيير الحالة", variant: "destructive" });
+                    return;
+                  }
+                  localDb.correspondence.update(selected.id, { status: v }); setSelected({ ...selected, status: v }); refetch();
+                }}>
                   <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="in_progress">قيد الإجراء</SelectItem>

@@ -52,6 +52,9 @@ const Courses = () => {
   const [hubForm, setHubForm] = useState({ courseId: "", courseName: "", trainerName: "", supervisorName: "", extraInfo: "" });
   const [hubQrs, setHubQrs] = useState<any[]>([]);
 
+  const [showAddTrainee, setShowAddTrainee] = useState(false);
+  const [traineeName, setTraineeName] = useState("");
+
   useEffect(() => {
     const focusId = searchParams.get("focus");
     if (focusId) {
@@ -164,17 +167,17 @@ const Courses = () => {
     refetch();
   };
 
-  const handleAddTrainee = async () => {
+  const handleAddTrainee = async (nameArg?: string) => {
     if (!has("add_course")) {
       toast({ title: "خطأ", description: "ليس لديك صلاحية إضافة متدرب", variant: "destructive" });
       return;
     }
     if (!selectedCourse) return;
-    const name = prompt("اسم المتدرب:");
-    if (!name?.trim()) return;
-    const emp = employees.find((e: any) => e.name === name.trim());
+    const name = (nameArg ?? traineeName).trim();
+    if (!name) return;
+    const emp = employees.find((e: any) => e.name === name);
     const traineeId = localDb.trainees.insert({
-      name: name.trim(),
+      name,
       course_id: selectedCourse.id,
       employee_id: emp?.id || null,
       status: "waiting",
@@ -182,11 +185,13 @@ const Courses = () => {
     if (selectedCourse) {
       setSelectedCourse({
         ...selectedCourse,
-        trainees: [...(selectedCourse.trainees || []), { id: traineeId, name: name.trim(), employee_id: emp?.id || null, status: "waiting", course_id: selectedCourse.id }],
+        trainees: [...(selectedCourse.trainees || []), { id: traineeId, name, employee_id: emp?.id || null, status: "waiting", course_id: selectedCourse.id }],
       });
     }
-    await logAction(user?.name || "مستخدم", "إضافة متدرب", `${name.trim()} → ${selectedCourse.title}`);
+    await logAction(user?.name || "مستخدم", "إضافة متدرب", `${name} → ${selectedCourse.title}`);
     toast({ title: "تم", description: "تمت إضافة المتدرب" });
+    setTraineeName("");
+    setShowAddTrainee(false);
     refetch();
   };
 
@@ -613,7 +618,7 @@ const Courses = () => {
 
               <div>
                 <h4 className="font-bold text-foreground mb-3 flex items-center gap-2"><User className="w-4 h-4 text-primary" />المتدربون ({(selectedCourse.trainees || []).length})
-                  {has("add_course") && <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 mr-auto" onClick={handleAddTrainee}><UserPlus className="w-3 h-3" />إضافة</Button>}
+                  {has("add_course") && <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1 mr-auto" onClick={() => setShowAddTrainee(true)}><UserPlus className="w-3 h-3" />إضافة</Button>}
                 </h4>
                 {(selectedCourse.trainees || []).length > 0 ? (
                   <div className="space-y-2">
@@ -737,6 +742,22 @@ const Courses = () => {
                 ))}
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAddTrainee} onOpenChange={setShowAddTrainee}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader><DialogTitle>إضافة متدرب</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>اسم المتدرب</Label>
+              <Input className="mt-1" value={traineeName} onChange={e => setTraineeName(e.target.value)} placeholder="أدخل اسم المتدرب" onKeyDown={e => e.key === "Enter" && handleAddTrainee()} />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => { setShowAddTrainee(false); setTraineeName(""); }}>إلغاء</Button>
+              <Button onClick={handleAddTrainee} disabled={!traineeName.trim()}>إضافة</Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

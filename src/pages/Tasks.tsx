@@ -23,6 +23,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   ListTodo, Plus, Loader2, ArrowLeftRight, ArrowUpRight, Eye, Clock, Check, X, MessageSquare, Send,
   LayoutGrid, List as ListIcon, ChevronDown, Trophy, Play, CheckCircle2, Zap, Calendar, Paperclip,
+  Trash2,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
 
@@ -507,6 +508,20 @@ const Tasks = () => {
     }
   };
 
+  const handleDeleteTask = async (taskId: string) => {
+    if (!has("delete_task")) {
+      toast({ title: "خطأ", description: "ليس لديك صلاحية حذف المهمة", variant: "destructive" });
+      return;
+    }
+    if (!confirm("هل أنت متأكد من حذف هذه المهمة؟")) return;
+    const task = tasks.find(t => t.id === taskId);
+    localDb.tasks.delete(taskId);
+    if (task) await logAction(userName, "حذف مهمة", task.title);
+    toast({ title: "تم", description: "تم حذف المهمة" });
+    if (showDetail === taskId) setShowDetail(null);
+    refetch();
+  };
+
   const handlePipelineClick = (key: string) => {
     if (filterStage === key) {
       setFilterStage(null);
@@ -568,6 +583,9 @@ const Tasks = () => {
     if (canEditTask(task) && !["completed", "handed_over", "approved", "review"].includes(task.status)) {
       if (!task.is_routine) btns.push(<button key="advance" onClick={() => handleAdvanceStage(task.id)} className="p-1.5 rounded-md bg-accent/10 text-accent hover:bg-accent/20 text-xs">ترقية</button>);
       btns.push(<button key="handover" onClick={() => setShowHandover(task.id)} className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20" title="تسليم"><ArrowLeftRight className="w-3.5 h-3.5" /></button>);
+    }
+    if ((isManager || isAdmin || task.created_by === userId) && task.status !== "handed_over") {
+      btns.push(<button key="delete" onClick={() => handleDeleteTask(task.id)} className="p-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20" title="حذف"><Trash2 className="w-3.5 h-3.5" /></button>);
     }
     btns.push(<button key="view" onClick={() => setShowDetail(task.id)} className="p-1.5 rounded-md bg-muted text-muted-foreground hover:bg-muted/80"><Eye className="w-3.5 h-3.5" /></button>);
     return <div className="flex gap-1 flex-wrap">{btns}</div>;
