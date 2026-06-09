@@ -79,6 +79,22 @@ const HRAttendance = () => {
   const [undoTarget, setUndoTarget] = useState<{ id: string; level: "unit" | "dept" } | null>(null);
   const [undoReason, setUndoReason] = useState("");
   const [commentDraft, setCommentDraft] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Deep-link: open a specific request dialog when arriving from a notification (/hr?req=ID)
+  useEffect(() => {
+    const reqId = searchParams.get("req");
+    if (!reqId || loading) return;
+    const found = requests.find(r => r.id === reqId);
+    if (found) {
+      setSelectedRequest(found);
+      const next = new URLSearchParams(searchParams);
+      next.delete("req");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, requests, loading, setSearchParams]);
+
+
 
   const today = new Date().toISOString().split("T")[0];
 
