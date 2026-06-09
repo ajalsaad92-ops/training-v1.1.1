@@ -607,6 +607,7 @@ export const localDb = {
     getAll: () => getAll<CourseTrainee>("trainees"),
     insert: (t: Partial<CourseTrainee>) => insertItem<CourseTrainee>("trainees", { created_at: now(), ...t } as CourseTrainee),
     update: (id: string, u: Partial<CourseTrainee>) => updateItem<CourseTrainee>("trainees", id, u),
+    delete: (id: string) => deleteItem<CourseTrainee>("trainees", id),
     deleteByCourse: (courseId: string) => {
       const s = getStore();
       s.trainees = s.trainees.filter(t => t.course_id !== courseId);
