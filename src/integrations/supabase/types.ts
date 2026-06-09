@@ -332,6 +332,24 @@ export type Database = {
         }
         Relationships: []
       }
+      global_state: {
+        Row: {
+          data: Json
+          id: number
+          updated_at: string | null
+        }
+        Insert: {
+          data: Json
+          id: number
+          updated_at?: string | null
+        }
+        Update: {
+          data?: Json
+          id?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       hr_requests: {
         Row: {
           approval_status: string
