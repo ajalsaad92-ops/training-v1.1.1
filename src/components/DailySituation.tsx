@@ -216,26 +216,36 @@ const DailySituation = ({ embedded = false }: DailySituationProps) => {
     return <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
 
-  const renderRequestActions = (req: HRRequest) => (
-    <div className="flex gap-1 flex-wrap no-print">
-      {req.approval_status === "pending" && (
-        <>
-          <button onClick={() => handleApprove(req.id, "unit")} className="p-1.5 rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors" title="موافقة رئيس الشعبة"><Check className="w-3.5 h-3.5" /></button>
-          <button onClick={() => handleReject(req.id)} className="p-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="رفض"><X className="w-3.5 h-3.5" /></button>
-          <button onClick={() => handleManagerOverride(req.id)} className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="موافقة مباشرة (مدير)"><Check className="w-3.5 h-3.5" strokeWidth={3} /></button>
-        </>
-      )}
-      {req.approval_status === "unit_approved" && (
-        <>
-          <button onClick={() => handleApprove(req.id, "dept")} className="p-1.5 rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors" title="موافقة نهائية"><Check className="w-3.5 h-3.5" /></button>
-          <button onClick={() => handleReject(req.id)} className="p-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="رفض"><X className="w-3.5 h-3.5" /></button>
-        </>
-      )}
-      {(req.approval_status === "approved" || req.approval_status === "rejected") && (
-        <button onClick={() => handleUndo(req.id)} className="p-1.5 rounded-md bg-warning/10 text-warning hover:bg-warning/20 transition-colors" title="تراجع"><Undo2 className="w-3.5 h-3.5" /></button>
-      )}
-    </div>
-  );
+  const renderRequestActions = (req: HRRequest) => {
+    const isRequester = req.created_by === userId;
+    // Only unit heads / managers (with the right permission) can act, and never on their own request
+    if (!canApprove || isRequester) return null;
+    return (
+      <div className="flex gap-1 flex-wrap no-print">
+        {req.approval_status === "pending" && (
+          <>
+            {canUnitApprove && (
+              <button onClick={() => handleApprove(req.id, "unit")} className="p-1.5 rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors" title="موافقة رئيس الشعبة"><Check className="w-3.5 h-3.5" /></button>
+            )}
+            {canDeptApprove && (
+              <button onClick={() => handleManagerOverride(req.id)} className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors" title="موافقة مباشرة (مدير)"><Check className="w-3.5 h-3.5" strokeWidth={3} /></button>
+            )}
+            <button onClick={() => handleReject(req.id)} className="p-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="رفض"><X className="w-3.5 h-3.5" /></button>
+          </>
+        )}
+        {req.approval_status === "unit_approved" && canDeptApprove && (
+          <>
+            <button onClick={() => handleApprove(req.id, "dept")} className="p-1.5 rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors" title="موافقة نهائية"><Check className="w-3.5 h-3.5" /></button>
+            <button onClick={() => handleReject(req.id)} className="p-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="رفض"><X className="w-3.5 h-3.5" /></button>
+          </>
+        )}
+        {(req.approval_status === "approved" || req.approval_status === "rejected") && canDeptApprove && has("undo_hr_decision") && (
+          <button onClick={() => handleUndo(req.id)} className="p-1.5 rounded-md bg-warning/10 text-warning hover:bg-warning/20 transition-colors" title="تراجع"><Undo2 className="w-3.5 h-3.5" /></button>
+        )}
+      </div>
+    );
+  };
+
 
   return (
     <div className={embedded ? "space-y-2" : "space-y-5"}>
