@@ -958,164 +958,137 @@ const Tasks = () => {
       <Dialog open={!!showDetail} onOpenChange={() => { setShowDetail(null); setCommentText(""); }}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto" dir="rtl">
           <DialogHeader><DialogTitle>تفاصيل المهمة</DialogTitle></DialogHeader>
-          {selectedTask && (
+          {selectedTask && (() => {
+            const viewerNames = Array.from(new Set([
+              ename(selectedTask.created_by),
+              ename(selectedTask.assigned_by),
+              ename(selectedTask.assigned_to),
+            ].filter(n => n && n !== "—")));
+            const elevated = isManager || isAdmin || isUnitHead;
+            const canSeeThread = elevated || selectedTask.assigned_to === userId || selectedTask.assigned_by === userId || selectedTask.created_by === userId;
+            const visibleComments = taskComments.filter((c: any) => {
+              if (c.is_hidden && !elevated) return false;
+              return elevated || c.author_id === userId || c.recipient_id === userId;
+            });
+            const canPost = selectedTask.assigned_to === userId || selectedTask.assigned_by === userId || elevated;
+            const handovers = taskHandovers.filter((h: { task_id: string }) => h.task_id === selectedTask.id);
+
+            return (
             <div className="space-y-4">
+              {/* ===== رأس مرتب: العنوان + الحالة ===== */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-bold text-foreground">{selectedTask.title}</h3>
-                  {selectedTask.is_routine && <Badge variant="secondary" className="text-[10px] mt-1">اعتيادية</Badge>}
-                </div>
-                <StatusBadge status={statusLabels[selectedTask.status] || selectedTask.status} variant={selectedTask.status === "approved" ? "success" : selectedTask.status === "review" ? "warning" : undefined} />
-              </div>
-
-              <div className="flex items-center gap-3 bg-muted/30 rounded-xl px-3 py-2.5">
-                <Avatar className="w-9 h-9">
-                  <AvatarFallback className="text-xs bg-primary/10 text-primary font-bold">{ename(selectedTask.assigned_to).split(" ").map((w: string) => w[0]).join("").slice(0, 2)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{ename(selectedTask.assigned_to)}</p>
-                  <p className="text-[10px] text-muted-foreground">{selectedTask.unit} · {selectedTask.estimated_hours ? `${selectedTask.estimated_hours} س` : "-"}</p>
-                  {selectedTask.viewed_at && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                      <Eye className="w-3 h-3" />
-                      شوهد: {new Date(selectedTask.viewed_at).toLocaleString("ar-IQ", { dateStyle: "short", timeStyle: "short" })}
-                    </p>
-                  )}
-                </div>
-                {(selectedTask.achievement_points || 0) > 0 && (
-                  <Badge variant="secondary" className="gap-0.5"><Zap className="w-3 h-3 text-warning" />{selectedTask.achievement_points}</Badge>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <div><p className="text-[10px] text-muted-foreground">أنشأها</p><p className="text-foreground text-xs">{ename(selectedTask.created_by)}</p></div>
-                <div><p className="text-[10px] text-muted-foreground">أسندها</p><p className="text-foreground text-xs">{ename(selectedTask.assigned_by)}</p></div>
-                <div><p className="text-[10px] text-muted-foreground">المرحلة</p><StatusBadge status={stageLabels[selectedTask.stage] || selectedTask.stage} variant="info" /></div>
-                <div><p className="text-[10px] text-muted-foreground">التسليم</p><p className="text-foreground text-xs">{selectedTask.handed_over ? "نعم" : "لا"}</p></div>
-                {selectedTask.previous_owner && <div><p className="text-[10px] text-muted-foreground">المالك السابق</p><p className="text-warning text-xs">{ename(selectedTask.previous_owner)}</p></div>}
-              </div>
-
-              {selectedTask.description && (
-                <div className="bg-muted/20 rounded-lg p-3">
-                  <p className="text-[10px] text-muted-foreground mb-1">الوصف</p>
-                  <p className="text-sm text-foreground whitespace-pre-wrap">{selectedTask.description}</p>
-                </div>
-              )}
-
-              <div className="border-t border-border pt-3">
-                <p className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5"><Paperclip className="w-3.5 h-3.5 text-primary" />المرفقات</p>
-                <FileList entityKey={`task_${selectedTask.id}`} showDelete={canEditTask(selectedTask)} />
-                <FileUploadButton entityKey={`task_${selectedTask.id}`} onUpload={() => refetch()} label="إرفاق ملف" />
-              </div>
-
-              {!selectedTask.is_routine && (
-                <div className="border-t border-border pt-3">
-                  <p className="text-xs font-bold text-foreground mb-3">مسار المهمة</p>
-                  <div className="space-y-0">
-                    {allStagesForTimeline.map((s, i) => {
-                      const isCurrent = selectedTask.stage === s;
-                      const currentIdx = allStagesForTimeline.indexOf(selectedTask.stage);
-                      const isPast = currentIdx > i;
-                      return (
-                        <div key={s} className="flex items-start gap-3">
-                          <div className="flex flex-col items-center">
-                            <div className={`w-3.5 h-3.5 rounded-full shrink-0 border-2 transition-all ${
-                              isCurrent ? "bg-primary border-primary animate-glow-pulse scale-125" :
-                              isPast ? "bg-success border-success" :
-                              "bg-muted border-muted-foreground/30"
-                            }`} />
-                            {i < allStagesForTimeline.length - 1 && (
-                              <div className={`w-0.5 h-5 ${isPast ? "bg-success" : "bg-muted-foreground/20"}`} />
-                            )}
-                          </div>
-                          <span className={`text-xs pb-1 ${isCurrent ? "font-bold text-primary" : isPast ? "text-success" : "text-muted-foreground"}`}>
-                            {stageLabels[s]}
-                          </span>
-                        </div>
-                      );
-                    })}
+                  <h3 className="text-base font-bold text-foreground leading-snug">{selectedTask.title}</h3>
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    {selectedTask.is_routine && <Badge variant="secondary" className="text-[10px]">اعتيادية</Badge>}
+                    <StatusBadge status={statusLabels[selectedTask.status] || selectedTask.status} variant={selectedTask.status === "approved" ? "success" : selectedTask.status === "review" ? "warning" : undefined} />
+                    {(selectedTask.achievement_points || 0) > 0 && (
+                      <Badge variant="secondary" className="gap-0.5"><Zap className="w-3 h-3 text-warning" />{selectedTask.achievement_points}</Badge>
+                    )}
                   </div>
                 </div>
-              )}
+              </div>
 
-              {taskHandovers.filter((h: { task_id: string }) => h.task_id === selectedTask.id).length > 0 && (
-                <div className="border-t border-border pt-3">
-                  <p className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5"><ArrowLeftRight className="w-3.5 h-3.5 text-accent" />سجل الإحالات</p>
-                  <div className="space-y-2">
-                    {taskHandovers.filter((h: { task_id: string }) => h.task_id === selectedTask.id).map((h: any) => (
-                      <div key={h.id} className="bg-muted/30 rounded-lg p-2.5 text-xs">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-foreground">{h.from_user_name} ← {h.to_user_name}</span>
-                          <span className="text-muted-foreground shrink-0">{new Date(h.created_at).toLocaleString("ar-EG", { dateStyle: "short", timeStyle: "short" })}</span>
-                        </div>
-                        {h.stage && <span className="badge-info mt-1 inline-block">{stageLabels[h.stage] || h.stage}</span>}
-                        {h.notes && <p className="text-muted-foreground mt-1">{h.notes}</p>}
-                        
-                        <div className="mt-2 flex items-center justify-between">
-                          <Badge variant={h.status === "approved" ? "default" : h.status === "rejected" ? "destructive" : "secondary"}>
-                            {h.status === "pending_acceptance" ? "بانتظار موافقة المستلم" : h.status === "pending_approval" ? "بانتظار موافقة المسؤول" : h.status === "approved" ? "تمت الإحالة" : h.status === "rejected" ? "مرفوضة" : "غير معروف"}
-                          </Badge>
-                          
-                          {h.status === "pending_acceptance" && h.to_user_id === userId && (
-                            <div className="flex gap-1">
-                              <Button size="sm" onClick={() => handleAcceptHandover(h.id, true)} className="h-6 text-[10px] px-2 bg-success text-success-foreground hover:bg-success/90">قبول</Button>
-                              <Button size="sm" onClick={() => handleAcceptHandover(h.id, false)} variant="destructive" className="h-6 text-[10px] px-2">رفض</Button>
-                            </div>
-                          )}
-                          
-                          {h.status === "pending_approval" && (isUnitHead || isManager || isAdmin) && selectedTask.unit === myUnit && (
-                            <div className="flex gap-1">
-                              <Button size="sm" onClick={() => handleApproveHandover(h.id, true)} className="h-6 text-[10px] px-2 bg-success text-success-foreground hover:bg-success/90">اعتماد الإحالة</Button>
-                              <Button size="sm" onClick={() => handleApproveHandover(h.id, false)} variant="destructive" className="h-6 text-[10px] px-2">رفض الإحالة</Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+              {/* ===== من / إلى / من يمكنه الرؤية (صغير مرتب) ===== */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-muted/30 rounded-lg p-2.5 text-center min-w-0">
+                  <p className="text-[10px] text-muted-foreground mb-0.5">من (المنشئ)</p>
+                  <p className="text-xs font-semibold text-foreground truncate">{ename(selectedTask.created_by)}</p>
                 </div>
-              )}
+                <div className="bg-muted/30 rounded-lg p-2.5 text-center min-w-0">
+                  <p className="text-[10px] text-muted-foreground mb-0.5">إلى (الموجَّهة له)</p>
+                  <p className="text-xs font-semibold text-foreground truncate">{ename(selectedTask.assigned_to)}</p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-2.5 text-center min-w-0">
+                  <p className="text-[10px] text-muted-foreground mb-0.5">يمكنه الرؤية</p>
+                  <p className="text-xs font-semibold text-foreground">{viewerNames.length}{elevated ? "+" : ""}</p>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground -mt-2 px-1 flex items-start gap-1">
+                <Eye className="w-3 h-3 mt-0.5 shrink-0" />
+                <span>{viewerNames.join("، ")}{elevated ? "، ورؤساء الشعب والإدارة" : ""}</span>
+              </p>
 
+              {/* ===== أزرار سريعة: إعادة التوجيه + الإجراءات ===== */}
+              {(() => {
+                const actions: React.ReactNode[] = [];
+                if (selectedTask.assigned_to === userId && isIndividual) {
+                  if (selectedTask.status === "pending") actions.push(<Button key="start" size="sm" variant="outline" className="gap-1" onClick={() => handleUpdateStatus(selectedTask.id, "in_progress")}><Play className="w-3.5 h-3.5" />بدء</Button>);
+                  if (selectedTask.status === "pending" || selectedTask.status === "in_progress" || selectedTask.status === "returned") actions.push(<Button key="done" size="sm" className="gap-1" onClick={() => setShowFinishDialog(selectedTask.id)}><CheckCircle2 className="w-3.5 h-3.5" />إنهاء</Button>);
+                }
+                if (canEditTask(selectedTask) && !["completed", "handed_over", "approved", "review"].includes(selectedTask.status)) {
+                  if (!selectedTask.is_routine) actions.push(<Button key="advance" size="sm" variant="outline" className="gap-1" onClick={() => handleAdvanceStage(selectedTask.id)}><Zap className="w-3.5 h-3.5" />ترقية</Button>);
+                  actions.push(<Button key="handover" size="sm" variant="outline" className="gap-1" onClick={() => setShowHandover(selectedTask.id)}><ArrowLeftRight className="w-3.5 h-3.5" />إعادة التوجيه</Button>);
+                }
+                if (actions.length === 0) return null;
+                return <div className="flex gap-2 flex-wrap no-print">{actions}</div>;
+              })()}
+
+              {/* ===== مراجعة المهمة (للمنشئ) ===== */}
               {(selectedTask.created_by === userId || isAdmin) && selectedTask.status === "review" && (
-                <div className="border-t border-border pt-3 space-y-3">
+                <div className="bg-warning/5 border border-warning/20 rounded-lg p-3 space-y-3">
                   <p className="text-xs font-bold text-foreground flex items-center gap-2"><MessageSquare className="w-4 h-4 text-warning" />مراجعة المهمة</p>
-                  <div className="flex gap-2">
-                    <Button size="sm" className="gap-1" onClick={() => handleApproveTask(selectedTask.id)}><Check className="w-3.5 h-3.5" />اعتماد</Button>
-                  </div>
+                  <Button size="sm" className="gap-1" onClick={() => handleApproveTask(selectedTask.id)}><Check className="w-3.5 h-3.5" />اعتماد</Button>
                   <div className="space-y-2">
-                    <Label>ملاحظة / تعليق (يرجع المهمة للتنفيذ)</Label>
+                    <Label className="text-xs">ملاحظة (تُرجع المهمة للتنفيذ)</Label>
                     <Textarea value={commentText} onChange={e => setCommentText(e.target.value)} placeholder="أضف ملاحظة للموظف..." rows={2} />
                     <Button size="sm" variant="outline" className="gap-1" onClick={() => handleSendComment(selectedTask.id)} disabled={!commentText.trim()}><Send className="w-3.5 h-3.5" />إرسال الملاحظة</Button>
                   </div>
                 </div>
               )}
 
-              <div className="border-t border-border pt-3 flex gap-2 flex-wrap no-print">
-                {(() => {
-                  const actions: React.ReactNode[] = [];
-                  if (selectedTask.assigned_to === userId && isIndividual) {
-                    if (selectedTask.status === "pending") actions.push(<Button key="start" size="sm" variant="outline" className="gap-1" onClick={() => handleUpdateStatus(selectedTask.id, "in_progress")}><Play className="w-3.5 h-3.5" />بدء</Button>);
-                    if (selectedTask.status === "pending" || selectedTask.status === "in_progress" || selectedTask.status === "returned") actions.push(<Button key="done" size="sm" className="gap-1" onClick={() => setShowFinishDialog(selectedTask.id)}><CheckCircle2 className="w-3.5 h-3.5" />إنهاء</Button>);
-                  }
-                  if (canEditTask(selectedTask) && !["completed", "handed_over", "approved", "review"].includes(selectedTask.status)) {
-                    if (!selectedTask.is_routine) actions.push(<Button key="advance" size="sm" variant="outline" className="gap-1" onClick={() => handleAdvanceStage(selectedTask.id)}><Zap className="w-3.5 h-3.5" />ترقية</Button>);
-                    actions.push(<Button key="handover" size="sm" variant="outline" className="gap-1" onClick={() => setShowHandover(selectedTask.id)}><ArrowLeftRight className="w-3.5 h-3.5" />تسليم</Button>);
-                  }
-                  return actions;
-                })()}
-              </div>
+              {/* ===== خانة التعليق + رفق الملفات + زر الإخفاء ===== */}
+              {canSeeThread && canPost && (
+                <div className="bg-muted/20 rounded-lg p-3 space-y-2">
+                  <p className="text-xs font-bold text-foreground flex items-center gap-2"><MessageSquare className="w-4 h-4 text-primary" />إضافة تعليق</p>
+                  <Select value={threadRecipient} onValueChange={setThreadRecipient}>
+                    <SelectTrigger className="text-xs h-8"><SelectValue placeholder="موجّه إلى (اختياري)" /></SelectTrigger>
+                    <SelectContent>
+                      {employees
+                        .filter(e => e.id !== userId && (e.id === selectedTask.assigned_to || e.id === selectedTask.assigned_by || e.id === selectedTask.created_by))
+                        .map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <div className="relative">
+                    <Textarea value={threadText} onChange={e => setThreadText(e.target.value)} placeholder="اكتب تعليقاً..." rows={2} className="pb-10" />
+                    <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                      <label className="cursor-pointer p-1.5 bg-muted rounded-md hover:bg-muted/80 transition-colors" title="رفق ملف">
+                        <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+                        <input type="file" className="hidden" onChange={async e => {
+                          const f = e.target.files?.[0] || null;
+                          setAttachment(f);
+                          if (f) {
+                            const stored = await fileStore.save(`task_comment_${showDetail}`, f, userId);
+                            setAttachmentFileId(stored.id);
+                          }
+                        }} />
+                      </label>
+                      {attachment && <span className="text-[10px] text-primary truncate max-w-[150px]">{attachment.name}</span>}
+                    </div>
+                  </div>
+                  {elevated && (
+                    <div className="flex items-center gap-2">
+                      <Checkbox checked={isHiddenComment} onCheckedChange={(c) => setIsHiddenComment(!!c)} id="hidden_comment" />
+                      <Label htmlFor="hidden_comment" className="text-xs text-muted-foreground">تعليق مخفي (لا يراه الموظف)</Label>
+                    </div>
+                  )}
+                  <Button size="sm" className="gap-1 w-full" onClick={() => handlePostComment(selectedTask.id)} disabled={!threadText.trim()}><Send className="w-3.5 h-3.5" />إرسال التعليق</Button>
+                </div>
+              )}
 
+              {/* ===== حالات الطلب مع التاريخ (متى ومن) ===== */}
               {selectedTask.history && selectedTask.history.length > 0 && (
                 <div className="border-t border-border pt-3">
-                  <p className="text-xs font-bold text-foreground mb-3 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-accent" />سجل الحالات الزمني</p>
+                  <p className="text-xs font-bold text-foreground mb-3 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-accent" />سجل الحالات (متى ومن)</p>
                   <div className="space-y-0">
-                    {selectedTask.history.map((h: any, i: number) => {
-                      const isLast = i === selectedTask.history.length - 1;
+                    {[...selectedTask.history].reverse().map((h: any, i: number) => {
+                      const isLast = i === 0;
+                      const isFirst = i === selectedTask.history.length - 1;
                       return (
                         <div key={i} className="flex items-start gap-3">
                           <div className="flex flex-col items-center">
                             <div className={`w-3.5 h-3.5 rounded-full shrink-0 border-2 transition-all ${isLast ? "bg-primary border-primary animate-glow-pulse scale-110" : "bg-muted border-muted-foreground/30"}`} />
-                            {!isLast && <div className="w-0.5 h-8 bg-muted-foreground/20" />}
+                            {!isFirst && <div className="w-0.5 h-8 bg-muted-foreground/20" />}
                           </div>
                           <div className="pb-4">
                             <span className={`text-xs font-bold ${isLast ? "text-primary" : "text-muted-foreground"}`}>
@@ -1139,24 +1112,107 @@ const Tasks = () => {
                 </div>
               )}
 
-              {(() => {
-                const canSeeThread =
-                  isManager || isAdmin || isUnitHead ||
-                  selectedTask.assigned_to === userId ||
-                  selectedTask.assigned_by === userId ||
-                  selectedTask.created_by === userId;
-                if (!canSeeThread) return null;
-                const visibleComments = taskComments.filter((c: any) => {
-                  if (c.is_hidden && !isManager && !isAdmin && !isUnitHead) return false;
-                  return isManager || isAdmin || isUnitHead || c.author_id === userId || c.recipient_id === userId;
-                });
-                const canPost = selectedTask.assigned_to === userId || selectedTask.assigned_by === userId || isManager || isAdmin || isUnitHead;
-                return (
-                  <div className="border-t border-border pt-3 space-y-3">
-                    <p className="text-xs font-bold text-foreground flex items-center gap-2">
+              {/* ===== كل تفاصيل المهمة (للأسفل) ===== */}
+              <div className="border-t border-border pt-3 space-y-4">
+                <p className="text-xs font-bold text-foreground flex items-center gap-1.5"><ListTodo className="w-3.5 h-3.5 text-primary" />تفاصيل المهمة</p>
+
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <div><p className="text-[10px] text-muted-foreground">أسندها</p><p className="text-foreground text-xs">{ename(selectedTask.assigned_by)}</p></div>
+                  <div><p className="text-[10px] text-muted-foreground">الشعبة</p><p className="text-foreground text-xs">{selectedTask.unit || "—"}</p></div>
+                  <div><p className="text-[10px] text-muted-foreground">المرحلة</p><StatusBadge status={stageLabels[selectedTask.stage] || selectedTask.stage} variant="info" /></div>
+                  <div><p className="text-[10px] text-muted-foreground">الساعات المقدّرة</p><p className="text-foreground text-xs">{selectedTask.estimated_hours ? `${selectedTask.estimated_hours} س` : "—"}</p></div>
+                  <div><p className="text-[10px] text-muted-foreground">التسليم</p><p className="text-foreground text-xs">{selectedTask.handed_over ? "نعم" : "لا"}</p></div>
+                  {selectedTask.previous_owner && <div><p className="text-[10px] text-muted-foreground">المالك السابق</p><p className="text-warning text-xs">{ename(selectedTask.previous_owner)}</p></div>}
+                  {selectedTask.viewed_at && <div className="col-span-2"><p className="text-[10px] text-muted-foreground">شوهدت</p><p className="text-foreground text-xs flex items-center gap-1"><Eye className="w-3 h-3" />{new Date(selectedTask.viewed_at).toLocaleString("ar-IQ", { dateStyle: "short", timeStyle: "short" })}</p></div>}
+                </div>
+
+                {selectedTask.description && (
+                  <div className="bg-muted/20 rounded-lg p-3">
+                    <p className="text-[10px] text-muted-foreground mb-1">الوصف</p>
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{selectedTask.description}</p>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5"><Paperclip className="w-3.5 h-3.5 text-primary" />المرفقات</p>
+                  <FileList entityKey={`task_${selectedTask.id}`} showDelete={canEditTask(selectedTask)} />
+                  <FileUploadButton entityKey={`task_${selectedTask.id}`} onUpload={() => refetch()} label="إرفاق ملف" />
+                </div>
+
+                {!selectedTask.is_routine && (
+                  <div>
+                    <p className="text-xs font-bold text-foreground mb-3">مسار المهمة</p>
+                    <div className="space-y-0">
+                      {allStagesForTimeline.map((s, i) => {
+                        const isCurrent = selectedTask.stage === s;
+                        const currentIdx = allStagesForTimeline.indexOf(selectedTask.stage);
+                        const isPast = currentIdx > i;
+                        return (
+                          <div key={s} className="flex items-start gap-3">
+                            <div className="flex flex-col items-center">
+                              <div className={`w-3.5 h-3.5 rounded-full shrink-0 border-2 transition-all ${
+                                isCurrent ? "bg-primary border-primary animate-glow-pulse scale-125" :
+                                isPast ? "bg-success border-success" :
+                                "bg-muted border-muted-foreground/30"
+                              }`} />
+                              {i < allStagesForTimeline.length - 1 && (
+                                <div className={`w-0.5 h-5 ${isPast ? "bg-success" : "bg-muted-foreground/20"}`} />
+                              )}
+                            </div>
+                            <span className={`text-xs pb-1 ${isCurrent ? "font-bold text-primary" : isPast ? "text-success" : "text-muted-foreground"}`}>
+                              {stageLabels[s]}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {handovers.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5"><ArrowLeftRight className="w-3.5 h-3.5 text-accent" />سجل الإحالات</p>
+                    <div className="space-y-2">
+                      {handovers.map((h: any) => (
+                        <div key={h.id} className="bg-muted/30 rounded-lg p-2.5 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium text-foreground">{h.from_user_name} ← {h.to_user_name}</span>
+                            <span className="text-muted-foreground shrink-0">{new Date(h.created_at).toLocaleString("ar-EG", { dateStyle: "short", timeStyle: "short" })}</span>
+                          </div>
+                          {h.stage && <span className="badge-info mt-1 inline-block">{stageLabels[h.stage] || h.stage}</span>}
+                          {h.notes && <p className="text-muted-foreground mt-1">{h.notes}</p>}
+
+                          <div className="mt-2 flex items-center justify-between">
+                            <Badge variant={h.status === "approved" ? "default" : h.status === "rejected" ? "destructive" : "secondary"}>
+                              {h.status === "pending_acceptance" ? "بانتظار موافقة المستلم" : h.status === "pending_approval" ? "بانتظار موافقة المسؤول" : h.status === "approved" ? "تمت الإحالة" : h.status === "rejected" ? "مرفوضة" : "غير معروف"}
+                            </Badge>
+
+                            {h.status === "pending_acceptance" && h.to_user_id === userId && (
+                              <div className="flex gap-1">
+                                <Button size="sm" onClick={() => handleAcceptHandover(h.id, true)} className="h-6 text-[10px] px-2 bg-success text-success-foreground hover:bg-success/90">قبول</Button>
+                                <Button size="sm" onClick={() => handleAcceptHandover(h.id, false)} variant="destructive" className="h-6 text-[10px] px-2">رفض</Button>
+                              </div>
+                            )}
+
+                            {h.status === "pending_approval" && (isUnitHead || isManager || isAdmin) && selectedTask.unit === myUnit && (
+                              <div className="flex gap-1">
+                                <Button size="sm" onClick={() => handleApproveHandover(h.id, true)} className="h-6 text-[10px] px-2 bg-success text-success-foreground hover:bg-success/90">اعتماد الإحالة</Button>
+                                <Button size="sm" onClick={() => handleApproveHandover(h.id, false)} variant="destructive" className="h-6 text-[10px] px-2">رفض الإحالة</Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {canSeeThread && (
+                  <div>
+                    <p className="text-xs font-bold text-foreground mb-2 flex items-center gap-2">
                       <MessageSquare className="w-4 h-4 text-primary" />التعليقات ({visibleComments.length})
                     </p>
-                    <div className="space-y-2 flex-1 overflow-y-auto pr-1">
+                    <div className="space-y-2">
                       {visibleComments.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-2">لا توجد تعليقات بعد</p>
                       ) : visibleComments.map((c: { id: string; author_id: string; author_name: string; recipient_name?: string; message: string; created_at: string; is_hidden?: boolean }) => {
@@ -1173,49 +1229,12 @@ const Tasks = () => {
                         );
                       })}
                     </div>
-                    {canPost && (
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <Select value={threadRecipient} onValueChange={setThreadRecipient}>
-                            <SelectTrigger className="text-xs"><SelectValue placeholder="موجّه إلى (اختياري)" /></SelectTrigger>
-                            <SelectContent>
-                              {employees
-                                .filter(e => e.id !== userId && (e.id === selectedTask.assigned_to || e.id === selectedTask.assigned_by || e.id === selectedTask.created_by))
-                                .map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="relative">
-                          <Textarea value={threadText} onChange={e => setThreadText(e.target.value)} placeholder="اكتب تعليقاً..." rows={2} className="pb-10" />
-                          <div className="absolute bottom-2 right-2 flex items-center gap-2">
-                             <label className="cursor-pointer p-1.5 bg-muted rounded-md hover:bg-muted/80 transition-colors" title="إرفاق ملف">
-                                <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
-                                <input type="file" className="hidden" onChange={async e => {
-                                  const f = e.target.files?.[0] || null;
-                                  setAttachment(f);
-                                  if (f) {
-                                    const stored = await fileStore.save(`task_comment_${showDetail}`, f, userId);
-                                    setAttachmentFileId(stored.id);
-                                  }
-                                }} />
-                             </label>
-                             {attachment && <span className="text-[10px] text-primary truncate max-w-[150px]">{attachment.name}</span>}
-                          </div>
-                        </div>
-                        {(isManager || isAdmin || isUnitHead) && (
-                          <div className="flex items-center gap-2 mb-1">
-                            <Checkbox checked={isHiddenComment} onCheckedChange={(c) => setIsHiddenComment(!!c)} id="hidden_comment" />
-                            <Label htmlFor="hidden_comment" className="text-xs text-muted-foreground">تعليق مخفي (لا يراه الموظف)</Label>
-                          </div>
-                        )}
-                        <Button size="sm" className="gap-1 w-full" onClick={() => handlePostComment(selectedTask.id)} disabled={!threadText.trim()}><Send className="w-3.5 h-3.5" />إرسال التعليق</Button>
-                      </div>
-                    )}
                   </div>
-                );
-              })()}
+                )}
+              </div>
             </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

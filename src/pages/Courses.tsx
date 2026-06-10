@@ -756,7 +756,7 @@ const Courses = () => {
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => { setShowAddTrainee(false); setTraineeName(""); }}>إلغاء</Button>
-              <Button onClick={handleAddTrainee} disabled={!traineeName.trim()}>إضافة</Button>
+              <Button onClick={() => handleAddTrainee()} disabled={!traineeName.trim()}>إضافة</Button>
             </div>
           </div>
         </DialogContent>
