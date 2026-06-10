@@ -642,6 +642,7 @@ export const localDb = {
       created_at: now(), updated_at: now(), ...t,
     } as Task),
     update: (id: string, u: Partial<Task>) => updateItem<Task>("tasks", id, { updated_at: now(), ...u } as Partial<Task>),
+    delete: (id: string) => deleteItem<Task>("tasks", id),
   },
   taskHandovers: {
     getAll: () => getAll<TaskHandover>("taskHandovers"),
