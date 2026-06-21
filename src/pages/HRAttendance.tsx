@@ -863,6 +863,70 @@ const HRAttendance = () => {
                   {req.notes && <div className="col-span-2 bg-muted/30 rounded-lg p-2.5"><p className="text-[10px] text-muted-foreground mb-0.5">ملاحظات المنتسب</p><p className="text-foreground">{req.notes}</p></div>}
                 </div>
 
+                {canManage && (() => {
+                  const month = (req.date || today).slice(0, 7);
+                  const empReqs = requests.filter(r => r.employee_name === req.employee_name);
+                  const inMonth = (r: HRRequest) => (r.date || "").startsWith(month);
+                  const leavesUsed = empReqs.filter(r => r.type === "إجازة اعتيادية" && r.approval_status === "approved" && inMonth(r)).length;
+                  const timeUsed = empReqs.filter(r => r.type === "خروجية" && r.approval_status === "approved" && inMonth(r)).reduce((s, r) => s + (parseInt(r.hours || "1") || 1), 0);
+                  const dutiesCount = empReqs.filter(r => r.type === "واجب" && r.approval_status === "approved" && inMonth(r)).length;
+                  const absencesCount = empReqs.filter(r => r.type === "غياب" && inMonth(r)).length;
+                  const movements = empReqs
+                    .filter(r => r.id !== req.id)
+                    .slice()
+                    .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+                    .slice(0, 12);
+                  return (
+                    <div className="border-t border-border pt-4">
+                      <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-1.5">
+                        <UserCheck className="w-4 h-4 text-primary" />ملخص سجل الموظف (شهر {month})
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                        <div className="rounded-lg p-2.5 bg-amber-500/10 text-center">
+                          <p className="text-lg font-bold text-amber-600 dark:text-amber-400">{leavesUsed}<span className="text-[10px] text-muted-foreground font-normal"> / 3</span></p>
+                          <p className="text-[10px] text-muted-foreground">إجازات اعتيادية</p>
+                        </div>
+                        <div className="rounded-lg p-2.5 bg-purple-500/10 text-center">
+                          <p className="text-lg font-bold text-purple-600 dark:text-purple-400">{timeUsed}<span className="text-[10px] text-muted-foreground font-normal"> / 7</span></p>
+                          <p className="text-[10px] text-muted-foreground">ساعات زمنية/خروجية</p>
+                        </div>
+                        <div className="rounded-lg p-2.5 bg-emerald-500/10 text-center">
+                          <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{dutiesCount}</p>
+                          <p className="text-[10px] text-muted-foreground">واجبات</p>
+                        </div>
+                        <div className="rounded-lg p-2.5 bg-red-500/10 text-center">
+                          <p className="text-lg font-bold text-red-600 dark:text-red-400">{absencesCount}</p>
+                          <p className="text-[10px] text-muted-foreground">غيابات</p>
+                        </div>
+                      </div>
+                      <p className="text-[11px] font-semibold text-muted-foreground mb-2">سجل الحركة (آخر الطلبات)</p>
+                      {movements.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">لا توجد حركات سابقة لهذا الموظف.</p>
+                      ) : (
+                        <div className="max-h-44 overflow-y-auto space-y-1.5">
+                          {movements.map(m => {
+                            const mcfg = getTypeConfig(m.type);
+                            const MIcon = mcfg.icon;
+                            return (
+                              <div key={m.id} className={`flex items-center justify-between gap-2 rounded-lg border-s-2 ${mcfg.border} bg-muted/30 px-2.5 py-1.5`}>
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <MIcon className={`w-3.5 h-3.5 shrink-0 ${mcfg.iconColor}`} />
+                                  <span className="text-xs font-medium text-foreground truncate">{m.type}</span>
+                                  {m.type === "خروجية" && m.hours && <span className="text-[10px] text-muted-foreground">({m.hours} س)</span>}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-[10px] text-muted-foreground">{m.date}</span>
+                                  <StatusBadge status={statusLabels[m.approval_status] || m.approval_status} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 <div className="border-t border-border pt-4">
                   <p className="text-sm font-semibold text-foreground mb-3">مسار الموافقة</p>
                   <div className="space-y-3">
