@@ -51,6 +51,36 @@ const PermissionRoute = ({ children, permission }: { children: JSX.Element, perm
   return children;
 };
 
+const LAST_ROUTE_KEY = "tms_last_route";
+
+// Persists the current route and restores the last visited page after a reload.
+const RoutePersistence = ({ user }: { user: unknown }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const restored = useRef(false);
+
+  // Restore the saved route once, right after the user is authenticated.
+  useEffect(() => {
+    if (!user || restored.current) return;
+    restored.current = true;
+    const saved = localStorage.getItem(LAST_ROUTE_KEY);
+    if (saved && saved !== location.pathname + location.search && location.pathname === "/") {
+      navigate(saved, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Save the current route whenever it changes (skip auth/survey routes).
+  useEffect(() => {
+    if (!user) return;
+    const path = location.pathname + location.search;
+    if (path.startsWith("/login") || path.startsWith("/survey")) return;
+    localStorage.setItem(LAST_ROUTE_KEY, path);
+  }, [user, location]);
+
+  return null;
+};
+
 const AppRoutes = () => {
   const { user, loading } = useAuth();
   const { has } = useUserRole();
