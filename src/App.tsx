@@ -132,6 +132,7 @@ const AppRoutes = () => {
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="*" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />
     </Routes>
+    </>
   );
 };
 
