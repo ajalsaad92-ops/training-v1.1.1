@@ -138,6 +138,7 @@ const Tasks = () => {
   const [isHiddenComment, setIsHiddenComment] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
   const [attachmentFileId, setAttachmentFileId] = useState<string | null>(null);
+  const [fileRefresh, setFileRefresh] = useState(0);
   const [activeChip, setActiveChip] = useState("all");
   const [filterStage, setFilterStage] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "board" | "gantt">("list");
@@ -1135,8 +1136,8 @@ const Tasks = () => {
 
                 <div>
                   <p className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5"><Paperclip className="w-3.5 h-3.5 text-primary" />المرفقات</p>
-                  <FileList entityKey={`task_${selectedTask.id}`} showDelete={canEditTask(selectedTask)} />
-                  <FileUploadButton entityKey={`task_${selectedTask.id}`} onUpload={() => refetch()} label="إرفاق ملف" />
+                  <FileList entityKey={`task_${selectedTask.id}`} showDelete={canEditTask(selectedTask)} refreshSignal={fileRefresh} />
+                  <FileUploadButton entityKey={`task_${selectedTask.id}`} onUpload={() => { setFileRefresh(v => v + 1); toast({ title: "تم رفع الملف", description: "تمت إضافة المرفق بنجاح" }); }} label="إرفاق ملف" />
                 </div>
 
                 {!selectedTask.is_routine && (

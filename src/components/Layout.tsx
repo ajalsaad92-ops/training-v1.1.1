@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { logAction } from "@/lib/auditLog";
+import { alertUser, requestNotificationPermission } from "@/lib/notify";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   state = { hasError: false };
@@ -45,6 +46,30 @@ const Layout = () => {
   const notifRef = useRef<HTMLDivElement>(null);
   const unreadCount = notifications.filter((n) => !n.is_read).length;
   const errMon = useErrorMonitorCount();
+
+  // Ask for OS notification permission once after login.
+  useEffect(() => {
+    if (user) requestNotificationPermission();
+  }, [user]);
+
+  // Alert (sound + vibration + system notification) on newly arrived notifications.
+  const seenNotifIds = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const unread = notifications.filter((n) => !n.is_read);
+    // First run: remember existing unread without alerting (avoid alert spam on load).
+    if (seenNotifIds.current === null) {
+      seenNotifIds.current = new Set(unread.map((n) => n.id));
+      return;
+    }
+    const fresh = unread.filter((n) => !seenNotifIds.current!.has(n.id));
+    if (fresh.length > 0) {
+      const first = fresh[0];
+      alertUser("إشعار جديد", first.message || "لديك إشعار جديد", () => {
+        if (first.link) navigate(first.link);
+      });
+      fresh.forEach((n) => seenNotifIds.current!.add(n.id));
+    }
+  }, [notifications, navigate]);
 
   const [unjustifiedAbsence, setUnjustifiedAbsence] = useState<any>(null);
   const [justification, setJustification] = useState("");
