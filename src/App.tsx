@@ -10,7 +10,7 @@ import Layout from "@/components/Layout";
 import ErrorMonitor from "@/components/ErrorMonitor";
 import Login from "@/pages/Login";
 import ConnectScreen from "@/components/ConnectScreen";
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { startScheduler } from "@/lib/scheduledReports";
 import { Loader2 } from "lucide-react";
 
