@@ -138,6 +138,7 @@ const Tasks = () => {
   const [isHiddenComment, setIsHiddenComment] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
   const [attachmentFileId, setAttachmentFileId] = useState<string | null>(null);
+  const [fileRefresh, setFileRefresh] = useState(0);
   const [activeChip, setActiveChip] = useState("all");
   const [filterStage, setFilterStage] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "board" | "gantt">("list");
