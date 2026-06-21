@@ -111,6 +111,8 @@ const AppRoutes = () => {
   }
 
   return (
+    <>
+    <RoutePersistence user={user} />
     <Routes>
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
