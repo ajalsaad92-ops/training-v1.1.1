@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { UIThemeProvider } from "@/contexts/UIThemeContext";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -10,7 +10,7 @@ import Layout from "@/components/Layout";
 import ErrorMonitor from "@/components/ErrorMonitor";
 import Login from "@/pages/Login";
 import ConnectScreen from "@/components/ConnectScreen";
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { startScheduler } from "@/lib/scheduledReports";
 import { Loader2 } from "lucide-react";
 
@@ -51,6 +51,36 @@ const PermissionRoute = ({ children, permission }: { children: JSX.Element, perm
   return children;
 };
 
+const LAST_ROUTE_KEY = "tms_last_route";
+
+// Persists the current route and restores the last visited page after a reload.
+const RoutePersistence = ({ user }: { user: unknown }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const restored = useRef(false);
+
+  // Restore the saved route once, right after the user is authenticated.
+  useEffect(() => {
+    if (!user || restored.current) return;
+    restored.current = true;
+    const saved = localStorage.getItem(LAST_ROUTE_KEY);
+    if (saved && saved !== location.pathname + location.search && location.pathname === "/") {
+      navigate(saved, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Save the current route whenever it changes (skip auth/survey routes).
+  useEffect(() => {
+    if (!user) return;
+    const path = location.pathname + location.search;
+    if (path.startsWith("/login") || path.startsWith("/survey")) return;
+    localStorage.setItem(LAST_ROUTE_KEY, path);
+  }, [user, location]);
+
+  return null;
+};
+
 const AppRoutes = () => {
   const { user, loading } = useAuth();
   const { has } = useUserRole();
@@ -81,6 +111,8 @@ const AppRoutes = () => {
   }
 
   return (
+    <>
+    <RoutePersistence user={user} />
     <Routes>
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
@@ -100,6 +132,7 @@ const AppRoutes = () => {
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="*" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />
     </Routes>
+    </>
   );
 };
 
