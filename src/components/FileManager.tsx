@@ -70,10 +70,12 @@ export function FileList({
   entityKey,
   onDelete,
   showDelete = false,
+  refreshSignal = 0,
 }: {
   entityKey: string;
   onDelete?: (fileId: string) => void;
   showDelete?: boolean;
+  refreshSignal?: number;
 }) {
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
@@ -84,7 +86,7 @@ export function FileList({
     setFiles(f);
   };
 
-  useEffect(() => { loadFiles(); }, [entityKey]);
+  useEffect(() => { loadFiles(); }, [entityKey, refreshSignal]);
 
   const handlePreview = async (file: StoredFile) => {
     const url = await fileStore.getObjectURL(file.id);
