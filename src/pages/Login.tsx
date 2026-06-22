@@ -2,25 +2,18 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { defaultUserAccounts } from "@/lib/localStore";
-import { Shield, LogIn, Eye, EyeOff, UserPlus } from "lucide-react";
+import { Shield, LogIn, Eye, EyeOff, UserPlus, Loader2, Server, HardDrive, Radio, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import ConnectionSetup from "@/components/ConnectionSetup";
-
-const roleLabels: Record<string, string> = {
-  admin: "مدير النظام",
-  dept_manager: "مدير القسم",
-  unit_head: "رئيس شعبة",
-  prep_unit_head: "مسؤول شعبة الإعداد",
-  curriculum_unit_head: "مسؤول شعبة المناهج",
-  curriculum_individual: "موظف مناهج",
-  prep_individual: "موظف إعداد",
-  trainer: "مدرب",
-  supervisor: "مشرف",
-  individual: "مستخدم عادي",
-  super_user: "مستخدم متميز",
-  training_admin: "مسؤول تدريب",
-};
+import { getConfig } from "@/lib/appConfig";
+import { prepareLoginConnection, startCentralServer } from "@/lib/connection";
+import { discoverServer } from "@/lib/sync/localServerSync";
+import { reinitSync } from "@/lib/sync/syncManager";
+import { setConfig } from "@/lib/appConfig";
+import { toast } from "@/hooks/use-toast";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -30,6 +23,15 @@ const Login = () => {
   const [isSignup, setIsSignup] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [connectStage, setConnectStage] = useState("");
+
+  // Server-setup dialog (shown when this desktop device must start the central server).
+  const [serverSetupOpen, setServerSetupOpen] = useState(false);
+  const [setupPort, setSetupPort] = useState(() => getConfig().localServer.port || 3000);
+  const [setupPath, setSetupPath] = useState(() => getConfig().storagePath || "");
+  const [startingServer, setStartingServer] = useState(false);
+  const pendingAuth = useState<null | (() => Promise<void>)>(null);
+
   const { login, signup, user, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -38,36 +40,67 @@ const Login = () => {
     return null;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    if (isSignup && !name) {
-      setError("الرجاء إدخال الاسم");
-      return;
-    }
-
-    setSubmitting(true);
-    const result = isSignup
-      ? await signup(email, password, name)
-      : await login(email, password);
-
+  const doAuth = async (fn: () => Promise<{ success: boolean; error?: string }>) => {
+    const result = await fn();
     if (!result.success) {
       setError(result.error || "حدث خطأ أثناء المصادقة");
     } else {
       navigate("/", { replace: true });
     }
-    setSubmitting(false);
   };
 
-  const quickLogin = async (email: string, password: string) => {
+  /** Runs the connection check, then the provided auth action. */
+  const withConnection = async (authFn: () => Promise<{ success: boolean; error?: string }>) => {
+    setError("");
     setSubmitting(true);
-    const result = await login(email, password);
-    if (!result.success) {
-      setError(result.error || "حدث خطأ");
-    } else {
-      navigate("/", { replace: true });
+    setConnectStage("جارٍ التحقق من الخادم...");
+    try {
+      const status = await prepareLoginConnection();
+      if (status === "need-server") {
+        // Desktop with no running server → open the server setup wizard.
+        setConnectStage("");
+        setSubmitting(false);
+        pendingAuth[1](() => doAuth(authFn));
+        setServerSetupOpen(true);
+        return;
+      }
+      if (status === "no-server") {
+        setConnectStage("");
+        setSubmitting(false);
+        setError("لم يُعثر على خادم محلي. استخدم لوحة الاتصال بالأعلى (بحث تلقائي أو اتصال يدوي) ثم سجّل الدخول.");
+        return;
+      }
+      // connected / is-server / cloud → proceed.
+      setConnectStage("");
+      await doAuth(authFn);
+    } finally {
+      setSubmitting(false);
+      setConnectStage("");
     }
-    setSubmitting(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSignup && !name) { setError("الرجاء إدخال الاسم"); return; }
+    await withConnection(() => (isSignup ? signup(email, password, name) : login(email, password)));
+  };
+
+  const quickLogin = async (qEmail: string, qPassword: string) => {
+    await withConnection(() => login(qEmail, qPassword));
+  };
+
+  const confirmStartServer = async () => {
+    setStartingServer(true);
+    const ok = await startCentralServer({ port: setupPort, storagePath: setupPath });
+    setStartingServer(false);
+    if (!ok) {
+      toast({ title: "تعذّر تشغيل الخادم", description: "تأكد من تشغيل نسخة سطح المكتب", variant: "destructive" });
+      return;
+    }
+    toast({ title: "تم تشغيل الخادم المحلي", description: "سيتم تسجيل الدخول الآن" });
+    setServerSetupOpen(false);
+    const run = pendingAuth[0];
+    if (run) await run();
   };
 
   return (
@@ -112,6 +145,12 @@ const Login = () => {
               </div>
             </div>
 
+            {connectStage && (
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-sm text-primary text-center flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />{connectStage}
+              </div>
+            )}
+
             {error && (
               <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive text-center">
                 {error}
@@ -119,7 +158,7 @@ const Login = () => {
             )}
 
             <Button type="submit" className="w-full gap-2" size="lg" disabled={submitting}>
-              {isSignup ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : isSignup ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
               {submitting ? "جاري المعالجة..." : isSignup ? "إنشاء حساب" : "دخول"}
             </Button>
           </form>
@@ -142,7 +181,8 @@ const Login = () => {
                   <button
                     key={acc.email}
                     onClick={() => quickLogin(acc.email, acc.password)}
-                    className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-3 text-right hover:bg-white/20 transition-colors"
+                    disabled={submitting}
+                    className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-3 text-right hover:bg-white/20 transition-colors disabled:opacity-50"
                   >
                     <p className="text-sm font-bold text-white truncate">{acc.profile.name}</p>
                     <p className="text-[10px] text-white/60">{sectionLabel}</p>
@@ -153,6 +193,34 @@ const Login = () => {
           </div>
         )}
       </div>
+
+      {/* ===== Server setup dialog (desktop, when no server is running) ===== */}
+      <Dialog open={serverSetupOpen} onOpenChange={setServerSetupOpen}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader className="text-right">
+            <DialogTitle className="flex items-center gap-2"><Server className="w-5 h-5 text-primary" />تشغيل الخادم المحلي</DialogTitle>
+            <DialogDescription>لم يُعثر على خادم مفتوح. اضبط الخادم المركزي لهذا الجهاز ثم ابدأ التشغيل لتسجيل الدخول.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-[11px] flex items-center gap-1.5"><HardDrive className="w-3.5 h-3.5" />مكان حفظ البيانات</Label>
+              <Input dir="ltr" value={setupPath} placeholder="C:\\TMS\\data" onChange={(e) => setSetupPath(e.target.value)} className="h-9 text-sm" />
+              <p className="text-[10px] text-muted-foreground">يُحفظ ولا حاجة لإدخاله في كل مرة.</p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px]">منفذ البث (Port)</Label>
+              <Input dir="ltr" type="number" value={setupPort} onChange={(e) => setSetupPort(Number(e.target.value) || 3000)} className="h-9 text-sm" />
+              <p className="text-[10px] text-muted-foreground">سيبثّ الخادم على عناوين الشبكة المحلية لهذا الجهاز وفق هذا المنفذ.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setServerSetupOpen(false)}>إلغاء</Button>
+            <Button className="gap-1.5" onClick={confirmStartServer} disabled={startingServer}>
+              {startingServer ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radio className="w-4 h-4" />}بدء الخادم وتسجيل الدخول
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
