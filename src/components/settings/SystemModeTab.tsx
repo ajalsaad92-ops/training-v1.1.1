@@ -164,11 +164,14 @@ const SystemModeTab = () => {
             )}
 
             {cfg.serverRole === "server" && (
-              <div className="space-y-1 pt-1">
-                <Label className="text-[11px]">مسار التخزين المحلي على الخادم (اختياري)</Label>
-                <Input dir="ltr" value={cfg.storagePath} placeholder="C:\\TMS\\data"
-                  onChange={(e) => applyConfig({ storagePath: e.target.value })} className="h-8 text-xs" />
-                <p className="text-[10px] text-muted-foreground">يُستخدم في نسخة سطح المكتب لتحديد مكان قاعدة البيانات والملفات.</p>
+              <div className="space-y-3 pt-1">
+                <ServerConnectionInfo port={cfg.localServer.port} />
+                <div className="space-y-1">
+                  <Label className="text-[11px]">مسار التخزين المحلي على الخادم (اختياري)</Label>
+                  <Input dir="ltr" value={cfg.storagePath} placeholder="C:\\TMS\\data"
+                    onChange={(e) => applyConfig({ storagePath: e.target.value })} className="h-8 text-xs" />
+                  <p className="text-[10px] text-muted-foreground">يُستخدم في نسخة سطح المكتب لتحديد مكان قاعدة البيانات والملفات.</p>
+                </div>
               </div>
             )}
 
