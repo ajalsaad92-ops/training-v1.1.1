@@ -10,12 +10,19 @@ const http = require("http");
 const DEFAULT_PORT = 3000;
 
 function resolveDistDir() {
-  const candidates = [
-    path.join(__dirname, "..", "dist"),
+  const packagedCandidates = [
+    // Real folder copied by extraResources; Express can serve it reliably.
+    path.join(process.resourcesPath || "", "dist"),
     path.join(process.resourcesPath || "", "app", "dist"),
+    path.join(app.getAppPath(), "dist"),
+    path.join(__dirname, "..", "dist"),
+  ];
+  const devCandidates = [
+    path.join(__dirname, "..", "dist"),
     path.join(process.resourcesPath || "", "dist"),
     path.join(app.getAppPath(), "dist"),
   ];
+  const candidates = app.isPackaged ? packagedCandidates : devCandidates;
   return candidates.find((dir) => fs.existsSync(path.join(dir, "index.html"))) || candidates[0];
 }
 
@@ -127,7 +134,7 @@ function buildApp() {
     res.json({ ok: true });
   });
 
-  // ---- Static SPA (served from real files; asar is disabled in electron-builder.yml) ----
+  // ---- Static SPA for LAN clients. The desktop window loads the same files directly. ----
   const indexFile = path.join(DIST_DIR, "index.html");
   server.use(express.static(DIST_DIR));
   // SPA fallback: every non-API GET returns index.html so BrowserRouter routes resolve.
