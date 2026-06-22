@@ -165,6 +165,30 @@ export async function setDeviceBlocked(deviceId: string, blocked: boolean): Prom
   }
 }
 
+export interface ServerNetworkInfo {
+  ips: { iface: string; address: string }[];
+  port: number;
+}
+
+/**
+ * Ask the server which LAN addresses it is reachable on. Used on the SERVER device to
+ * show clients exactly what to type, and to build copy-paste / QR connection links.
+ */
+export async function getServerNetworkInfo(): Promise<ServerNetworkInfo | null> {
+  try {
+    const j = await fetchJson("/api/ip", undefined, 4000);
+    if (j?.ok) {
+      return {
+        ips: Array.isArray(j.ips) ? j.ips : [],
+        port: typeof j.port === "number" ? j.port : getConfig().localServer.port,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Best-effort discovery of the local server on the LAN.
  * Browsers cannot enumerate LAN IPs, so we probe likely candidates:
