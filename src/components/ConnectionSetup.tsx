@@ -212,9 +212,13 @@ const SetupDialog = ({
   }, [open]);
 
   const startServer = () => {
-    apply({ mode: "local", serverRole: "server" });
+    apply({
+      mode: "local",
+      serverRole: "server",
+      localServer: { host: "127.0.0.1", port: 3003 },
+    });
     reinitSync();
-    toast({ title: "تم بدء الخادم المحلي", description: "يبث الخادم الآن وفق الإعدادات المحددة" });
+    toast({ title: "تم بدء الخادم المحلي", description: "127.0.0.1:3003" });
     onOpenChange(false);
   };
 
@@ -262,7 +266,7 @@ const SetupDialog = ({
               <div className="space-y-1">
                 <Label className="text-[11px]">المنفذ</Label>
                 <Input dir="ltr" type="number" value={cfg.localServer.port}
-                  onChange={(e) => apply({ localServer: { ...cfg.localServer, port: Number(e.target.value) || 3000 } })}
+                  onChange={(e) => apply({ localServer: { ...cfg.localServer, port: Number(e.target.value) || 3003 } })}
                   className="h-9 text-sm" />
               </div>
               <div className="space-y-1">
@@ -293,7 +297,7 @@ const SetupDialog = ({
               <div className="space-y-1">
                 <Label className="text-[11px]">المنفذ</Label>
                 <Input dir="ltr" type="number" value={cfg.localServer.port}
-                  onChange={(e) => apply({ localServer: { ...cfg.localServer, port: Number(e.target.value) || 3000 } })}
+                  onChange={(e) => apply({ localServer: { ...cfg.localServer, port: Number(e.target.value) || 3003 } })}
                   className="h-9 text-sm" />
               </div>
             </div>
