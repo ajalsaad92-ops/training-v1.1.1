@@ -5,7 +5,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import {
   LayoutDashboard, Users, BookOpen, GraduationCap, ClipboardCheck,
   BarChart3, Settings, ChevronRight, ChevronLeft, Sun, Moon,
-  Shield, ListTodo, FileText, CalendarDays, FolderArchive,
+  Shield, ListTodo, FileText, CalendarDays, FolderArchive, LogOut,
 } from "lucide-react";
 
 const allNavItems = [
