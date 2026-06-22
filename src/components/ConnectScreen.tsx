@@ -18,7 +18,7 @@ const ConnectScreen = () => {
     setTesting(true);
     setError("");
     setSuccess(false);
-    const base = trimmed.startsWith("http") ? trimmed : "http://" + trimmed + ":3000";
+    const base = trimmed.startsWith("http") ? trimmed : "http://" + trimmed + ":3003";
     try {
       const res = await fetch(base + "/api/ping", { signal: AbortSignal.timeout(5000) });
       const data = await res.json();
@@ -99,7 +99,7 @@ const ConnectScreen = () => {
               value={ip}
               onChange={e => { setIp(e.target.value); setError(""); setSuccess(false); }}
               onKeyDown={handleKeyDown}
-              placeholder="مثال: 192.168.102.212"
+              placeholder="مثال: 127.0.0.1"
               dir="ltr"
               className="w-full px-4 py-3 rounded-xl border bg-background text-foreground text-sm text-center placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
             />
