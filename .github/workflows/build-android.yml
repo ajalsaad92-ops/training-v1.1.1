@@ -54,4 +54,4 @@ jobs:
         with:
           name: app-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-found: warn
+          if-no-files-found: error
