@@ -121,9 +121,27 @@ const ConnectScreen = () => {
           )}
 
           <button
-            onClick={handleConnect}
-            disabled={testing || !ip.trim()}
+            onClick={handleAutoConnect}
+            disabled={testing || discovering}
             className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-primary/90 transition"
+          >
+            {discovering ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                جارٍ البحث عن الخادم...
+              </>
+            ) : (
+              <>
+                <Search className="w-4 h-4" />
+                بحث تلقائي والاتصال
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleConnect}
+            disabled={testing || discovering || !ip.trim()}
+            className="w-full py-3 rounded-xl border border-primary text-primary font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-primary/5 transition"
           >
             {testing ? (
               <>
@@ -133,7 +151,7 @@ const ConnectScreen = () => {
             ) : (
               <>
                 <RefreshCw className="w-4 h-4" />
-                اتصال
+                اتصال يدوي
               </>
             )}
           </button>
