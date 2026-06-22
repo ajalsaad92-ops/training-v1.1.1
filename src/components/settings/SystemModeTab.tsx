@@ -7,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   Cloud, HardDrive, Server, Smartphone, RefreshCw, Wifi, WifiOff, Loader2,
   DownloadCloud, CheckCircle2, Search, ShieldOff, ShieldCheck, MonitorSmartphone, Save,
+  Copy, Check, Network,
 } from "lucide-react";
 import {
   getConfig, setConfig, type AppMode, type ServerRole,
@@ -14,7 +15,7 @@ import {
 import { reinitSync, manualPullFromCloud } from "@/lib/sync/syncManager";
 import {
   pingLocalServer, discoverServer, getConnectedDevices, setDeviceBlocked,
-  type ConnectedDevice,
+  getServerNetworkInfo, type ConnectedDevice, type ServerNetworkInfo,
 } from "@/lib/sync/localServerSync";
 import { getDeviceName, setDeviceName } from "@/lib/deviceIdentity";
 import { checkForUpdates, applyUpdates, type UpdateCategory, type UpdateCategoryId } from "@/lib/updates/updateManager";
