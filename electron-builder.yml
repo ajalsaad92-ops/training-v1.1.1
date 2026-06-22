@@ -4,10 +4,11 @@ directories:
   output: release
 files:
   - dist/**/*
-  - server/**/*
   - electron/**/*
   - package.json
-asar: true
+# asar disabled so the bundled Express server can read dist/ files reliably
+# (serving static files from inside an asar archive is unreliable in production).
+asar: false
 win:
   target: portable
   signAndEditExecutable: false
