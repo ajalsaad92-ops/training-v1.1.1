@@ -42,7 +42,7 @@ const CONFIG_KEY = "tms_app_config";
 const DEFAULT_CONFIG: AppConfig = {
   mode: "cloud",
   serverRole: "client",
-  localServer: { host: "", port: 3000 },
+  localServer: { host: "127.0.0.1", port: 3003 },
   storagePath: "",
   autoDiscover: true,
 };

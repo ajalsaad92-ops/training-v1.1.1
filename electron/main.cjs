@@ -7,7 +7,7 @@ const os = require("os");
 const fs = require("fs");
 const http = require("http");
 
-const DEFAULT_PORT = 3000;
+const DEFAULT_PORT = 3003;
 
 function resolveDistDir() {
   const packagedCandidates = [
