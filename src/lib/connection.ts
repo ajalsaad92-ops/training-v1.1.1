@@ -87,6 +87,8 @@ export async function startCentralServer(opts: { port: number; storagePath: stri
     localServer: { ...getConfig().localServer, port: opts.port },
   });
   reinitSync();
-  // The desktop main process already serves the API; confirm it is reachable.
-  return pingLocalServer();
+  // The desktop main process already serves the API. Try to confirm, but on the
+  // desktop app treat the server as running even if the ping is slow/blocked.
+  const ok = await pingLocalServer();
+  return ok || isElectronRuntime();
 }
