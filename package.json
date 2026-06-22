@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "electron:dev": "vite build && electron electron/main.js",
+    "electron:dev": "vite build && electron electron/main.cjs",
     "electron:build": "vite build && electron-builder --win portable",
     "cap:init": "npx cap init tadreeb-tms com.tadreeb.tms --web-dir dist",
     "cap:add:android": "npx cap add android",
