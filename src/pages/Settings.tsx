@@ -115,6 +115,7 @@ const Settings = () => {
         {activeTab === "general" && (
           <GeneralTab backupDone={backupDone} onBackup={handleBackup} onReset={handleResetData} />
         )}
+        {activeTab === "system" && <SystemModeTab />}
         {activeTab === "users" && <UsersTab />}
         {activeTab === "permissions" && <PermissionsTab />}
         {activeTab === "designs" && <DesignsTab />}
