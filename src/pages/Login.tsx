@@ -5,6 +5,7 @@ import { defaultUserAccounts } from "@/lib/localStore";
 import { Shield, LogIn, Eye, EyeOff, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import ConnectionSetup from "@/components/ConnectionSetup";
 
 const roleLabels: Record<string, string> = {
   admin: "مدير النظام",
