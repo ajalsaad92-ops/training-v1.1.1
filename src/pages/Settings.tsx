@@ -841,39 +841,12 @@ const PermissionsTab = () => {
   );
 };
 
-// ===== DESIGNS TAB =====
-const DesignsTab = () => {
-  const [selected, setSelected] = useState<string | null>(null);
-  return (
-    <div className="space-y-4">
-      <h3 className="font-bold text-sm text-foreground flex items-center gap-2"><Palette className="w-4 h-4 text-primary" />معرض التصاميم</h3>
-      <p className="text-[11px] text-muted-foreground">نماذج لوحات القيادة المتاحة</p>
-      {[
-        { id: "classic", title: "التصميم الكلاسيكي", badge: "مدير" },
-        { id: "stages", title: "تصميم مراحل المناهج", badge: "مناهج" },
-        { id: "individual", title: "اللوحة الشخصية", badge: "مستخدم" },
-        { id: "notifications", title: "الإشعارات والتنبيهات", badge: "جميع" },
-      ].map(d => (
-        <div key={d.id}>
-          <div className="flex items-center gap-3 cursor-pointer py-1" onClick={() => setSelected(selected === d.id ? null : d.id)}>
-            <div className={`w-3 h-3 rounded-full border-2 transition-colors ${selected === d.id ? "bg-primary border-primary" : "border-muted-foreground"}`} />
-            <span className="text-xs font-bold">{d.title}</span>
-            <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">{d.badge}</span>
-          </div>
-          {selected === d.id && (
-            <div className="border border-primary/20 rounded-lg p-3 mt-1 animate-fade-in">
-              <p className="text-[11px] text-muted-foreground">عرض التصميم — يظهر في لوحة القيادة حسب دور المستخدم</p>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
-
 // ===== TOOLS TAB =====
-const ToolsTab = ({ logout, userName }: { logout: () => Promise<void>; userName: string }) => {
+const ToolsTab = ({ canBackup }: { canBackup: boolean }) => {
   const [errMonVisible, setErrMonVisible] = useState(false);
+  const [backupDone, setBackupDone] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   const toggleErrMon = () => {
     const next = !errMonVisible;
@@ -882,26 +855,95 @@ const ToolsTab = ({ logout, userName }: { logout: () => Promise<void>; userName:
     toast({ title: next ? "مراقب الأخطاء مفعّل" : "مراقب الأخطاء معطّل" });
   };
 
-  const shareLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast({ title: "تم نسخ الرابط" });
+  const handleBackup = () => {
+    if (!canBackup) { toast({ title: "غير مصرح", description: "النسخ الاحتياطي متاح لمدير القسم أو الأدمن فقط", variant: "destructive" }); return; }
+    downloadFullBackup();
+    setBackupDone(true);
+    toast({ title: "تم", description: "تم تحميل نسخة احتياطية كاملة لجميع بيانات التطبيق" });
+    setTimeout(() => setBackupDone(false), 3000);
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        const res = restoreFromBackup(parsed);
+        if (!res.ok) { toast({ title: "خطأ", description: res.message, variant: "destructive" }); return; }
+        toast({ title: "تم", description: res.message + " — سيتم إعادة تحميل الصفحة" });
+        setTimeout(() => window.location.reload(), 1000);
+      } catch {
+        toast({ title: "خطأ", description: "ملف النسخة الاحتياطية غير صالح", variant: "destructive" });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const pullCloud = async () => {
+    setSyncing(true);
+    const res = await manualPullFromCloud();
+    setSyncing(false);
+    toast({ title: res.ok ? "تمت المزامنة" : "فشلت المزامنة", description: res.message, variant: res.ok ? "default" : "destructive" });
+  };
+
+  const checkUpdates = async () => {
+    setChecking(true);
+    try {
+      const r = await checkForUpdates();
+      toast({ title: r.available ? "تتوفر تحديثات" : "النسخة محدّثة", description: `السحابة: ${r.cloudVersion} • المثبّت: ${r.installedVersion}` });
+    } catch {
+      toast({ title: "تعذّر التحقق من التحديثات", variant: "destructive" });
+    }
+    setChecking(false);
   };
 
   return (
-    <div className="space-y-3">
-      <h3 className="font-bold text-sm text-foreground flex items-center gap-2"><Bug className="w-4 h-4 text-primary" />أدوات</h3>
+    <div className="space-y-4">
+      <h3 className="font-bold text-sm text-foreground flex items-center gap-2"><Wrench className="w-4 h-4 text-primary" />أدوات</h3>
+
       <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
+        {/* Backup */}
+        <div className="bg-card rounded-lg border border-border p-4">
+          <h3 className="font-bold text-sm text-foreground mb-2 flex items-center gap-2"><Database className="w-4 h-4 text-primary" />النسخ الاحتياطي</h3>
+          <p className="text-xs text-muted-foreground mb-3">حفظ نسخة احتياطية كاملة لكل بيانات التطبيق {canBackup ? "" : "(متاح لمدير القسم أو الأدمن فقط)"}</p>
+          <Button onClick={handleBackup} size="sm" className="gap-1.5" disabled={!canBackup}>
+            <Download className="w-3.5 h-3.5" />{backupDone ? "✓ تم" : "تحميل نسخة كاملة"}
+          </Button>
+        </div>
+
+        {/* Import backup */}
+        <div className="bg-card rounded-lg border border-border p-4">
+          <h3 className="font-bold text-sm text-foreground mb-2 flex items-center gap-2"><FileSpreadsheet className="w-4 h-4 text-accent" />استيراد نسخة احتياطية</h3>
+          <p className="text-xs text-muted-foreground mb-3">استعادة جميع البيانات من ملف نسخة احتياطية</p>
+          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20">
+            <Upload className="w-3.5 h-3.5" />استيراد
+            <input type="file" accept=".json" className="hidden" onChange={handleImport} />
+          </label>
+        </div>
+
+        {/* Pull from cloud */}
+        <button onClick={pullCloud} disabled={syncing} className="bg-card border border-border rounded-lg p-3 flex items-center gap-3 hover:shadow-md transition-all text-right disabled:opacity-60">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            {syncing ? <Loader2 className="w-4 h-4 text-primary animate-spin" /> : <DownloadCloud className="w-4 h-4 text-primary" />}
+          </div>
+          <div><p className="text-xs font-bold">سحب من السحابة الآن</p><p className="text-[10px] text-muted-foreground">تحديث البيانات المحلية من السحابة</p></div>
+        </button>
+
+        {/* Check updates */}
+        <button onClick={checkUpdates} disabled={checking} className="bg-card border border-border rounded-lg p-3 flex items-center gap-3 hover:shadow-md transition-all text-right disabled:opacity-60">
+          <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+            {checking ? <Loader2 className="w-4 h-4 text-accent animate-spin" /> : <RefreshCw className="w-4 h-4 text-accent" />}
+          </div>
+          <div><p className="text-xs font-bold">التحقق من التحديثات</p><p className="text-[10px] text-muted-foreground">فحص توفر نسخة أحدث</p></div>
+        </button>
+
+        {/* Error monitor */}
         <button onClick={toggleErrMon} className="bg-card border border-border rounded-lg p-3 flex items-center gap-3 hover:shadow-md transition-all text-right">
           <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${errMonVisible ? "bg-warning/10" : "bg-muted"}`}><Bug className={`w-4 h-4 ${errMonVisible ? "text-warning" : "text-muted-foreground"}`} /></div>
           <div><p className="text-xs font-bold">مراقب الأخطاء</p><p className="text-[10px] text-muted-foreground">{errMonVisible ? "مفعّل" : "معطّل"}</p></div>
-        </button>
-        <button onClick={shareLink} className="bg-card border border-border rounded-lg p-3 flex items-center gap-3 hover:shadow-md transition-all text-right">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><Share2 className="w-4 h-4 text-primary" /></div>
-          <div><p className="text-xs font-bold">مشاركة الرابط</p><p className="text-[10px] text-muted-foreground">نسخ رابط الصفحة</p></div>
-        </button>
-        <button onClick={logout} className="bg-card border border-destructive/20 rounded-lg p-3 flex items-center gap-3 hover:bg-destructive/5 transition-all text-right">
-          <div className="w-9 h-9 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0"><LogOut className="w-4 h-4 text-destructive" /></div>
-          <div><p className="text-xs font-bold text-destructive">تسجيل الخروج</p><p className="text-[10px] text-muted-foreground">خروج من {userName}</p></div>
         </button>
       </div>
     </div>
