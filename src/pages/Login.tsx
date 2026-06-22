@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { defaultUserAccounts } from "@/lib/localStore";
-import { Shield, LogIn, Eye, EyeOff, UserPlus, Loader2, Server, HardDrive, Radio, Search } from "lucide-react";
+import { Shield, LogIn, Eye, EyeOff, UserPlus, Loader2, Server, HardDrive, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,9 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import ConnectionSetup from "@/components/ConnectionSetup";
 import { getConfig } from "@/lib/appConfig";
 import { prepareLoginConnection, startCentralServer } from "@/lib/connection";
-import { discoverServer } from "@/lib/sync/localServerSync";
-import { reinitSync } from "@/lib/sync/syncManager";
-import { setConfig } from "@/lib/appConfig";
 import { toast } from "@/hooks/use-toast";
 
 const Login = () => {
