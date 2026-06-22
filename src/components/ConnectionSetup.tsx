@@ -290,7 +290,7 @@ const SetupDialog = ({
             <div className="grid grid-cols-[1fr_100px] gap-2">
               <div className="space-y-1">
                 <Label className="text-[11px]">عنوان IP للخادم</Label>
-                <Input dir="ltr" value={cfg.localServer.host} placeholder="192.168.1.10"
+                <Input dir="ltr" value={cfg.localServer.host} placeholder="127.0.0.1"
                   onChange={(e) => apply({ localServer: { ...cfg.localServer, host: e.target.value } })}
                   className="h-9 text-sm" />
               </div>
