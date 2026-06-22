@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from "react";
-import { Wifi, WifiOff, Loader2, Monitor, Smartphone, RefreshCw } from "lucide-react";
+import { Wifi, WifiOff, Loader2, Monitor, Smartphone, RefreshCw, Search } from "lucide-react";
+import { discoverServer } from "@/lib/sync/localServerSync";
 
 const ConnectScreen = () => {
   const [ip, setIp] = useState("");
