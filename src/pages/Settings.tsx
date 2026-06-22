@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
-import { localDb, type UserProfile, clearAllStoreData } from "@/lib/localStore";
+import { localDb, type UserProfile } from "@/lib/localStore";
 import {
   PERMISSION_CATEGORIES, ALL_PERMISSIONS, ROLE_PERMISSIONS,
   getPermissionsForRoles, getPermissionDef,
@@ -15,80 +15,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import {
   Settings as SettingsIcon, Download, Upload, Shield, Database, FileSpreadsheet,
-  AlertTriangle, CheckCircle2, XCircle, Clock, Loader2, LogOut, Bug, Share2,
-  Palette, Users, UserPlus, RefreshCw, Lock, Search, ChevronDown, ChevronUp,
-  Eye, EyeOff, RotateCcw, Copy, Pencil, Trash2, Server,
+  AlertTriangle, CheckCircle2, XCircle, Clock, Loader2, LogOut, Bug, Bell,
+  Users, UserPlus, RefreshCw, Lock, Search, ChevronDown, ChevronUp, DownloadCloud,
+  Eye, EyeOff, RotateCcw, Copy, Pencil, Trash2, FileText, Wrench,
 } from "lucide-react";
-import SystemModeTab from "@/components/settings/SystemModeTab";
+import NotificationsControl from "@/components/settings/NotificationsControl";
+import { downloadFullBackup, restoreFromBackup } from "@/lib/backup";
+import { manualPullFromCloud } from "@/lib/sync/syncManager";
+import { checkForUpdates, applyUpdates } from "@/lib/updates/updateManager";
 
-type SettingsTab = "general" | "system" | "users" | "permissions" | "designs" | "tools";
+type SettingsTab = "general" | "permissions" | "tools";
 
 const Settings = () => {
-  const { user, logout } = useAuth();
-  const { has } = useUserRole();
+  const { user } = useAuth();
+  const { has, isManager } = useUserRole();
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
-  const [backupDone, setBackupDone] = useState(false);
 
   const canManageUsers = has("view_users") || has("add_user");
   const canManagePerms = has("manage_permissions");
 
   const tabs: { id: SettingsTab; label: string; icon: React.ElementType; show: boolean }[] = [
     { id: "general", label: "عام", icon: Database, show: true },
-    { id: "system", label: "الوضع والمزامنة", icon: Server, show: true },
-    { id: "users", label: "المستخدمين", icon: Users, show: canManageUsers },
-    { id: "permissions", label: "الصلاحيات", icon: Shield, show: canManagePerms },
-    { id: "designs", label: "التصاميم", icon: Palette, show: true },
-    { id: "tools", label: "أدوات", icon: Bug, show: true },
+    { id: "permissions", label: "الصلاحيات", icon: Shield, show: true },
+    { id: "tools", label: "أدوات", icon: Wrench, show: true },
   ];
-
-  const handleBackup = () => {
-    const allData = {
-      employees: localDb.employees.getAll(),
-      courses: localDb.courses.getAll(),
-      hrRequests: localDb.hrRequests.getAll(),
-      curriculumItems: localDb.curriculumItems.getAll(),
-      correspondence: localDb.correspondence.getAll(),
-      tasks: localDb.tasks.getAll(),
-      profiles: localDb.profiles.getAll(),
-      exportDate: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `tms-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setBackupDone(true);
-    setTimeout(() => setBackupDone(false), 3000);
-  };
-
-  const handleResetData = () => {
-    const input = prompt("اكتب 'إعادة تعيين' لتأكيد حذف جميع البيانات:");
-    if (input !== "إعادة تعيين") return;
-    const allData = {
-      employees: localDb.employees.getAll(),
-      courses: localDb.courses.getAll(),
-      trainees: localDb.trainees.getAll(),
-      hrRequests: localDb.hrRequests.getAll(),
-      curriculumItems: localDb.curriculumItems.getAll(),
-      correspondence: localDb.correspondence.getAll(),
-      tasks: localDb.tasks.getAll(),
-      profiles: localDb.profiles.getAll(),
-      exportDate: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `tms-auto-backup-before-reset-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    localStorage.removeItem("tms_custom_permissions");
-    clearAllStoreData();
-    toast({ title: "تم إعادة التعيين", description: "تم تفريغ جميع البيانات وحفظ نسخة احتياطية تلقائياً" });
-    setTimeout(() => window.location.reload(), 500);
-  };
 
   const visibleTabs = tabs.filter(t => t.show);
 
@@ -112,14 +62,81 @@ const Settings = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0 animate-fade-in" key={activeTab}>
-        {activeTab === "general" && (
-          <GeneralTab backupDone={backupDone} onBackup={handleBackup} onReset={handleResetData} />
-        )}
-        {activeTab === "system" && <SystemModeTab />}
-        {activeTab === "users" && <UsersTab />}
-        {activeTab === "permissions" && <PermissionsTab />}
-        {activeTab === "designs" && <DesignsTab />}
-        {activeTab === "tools" && <ToolsTab logout={logout} userName={user?.name || ""} />}
+        {activeTab === "general" && <GeneralTab canManageUsers={canManageUsers} />}
+        {activeTab === "permissions" && <PermissionsHub canManagePerms={canManagePerms} />}
+        {activeTab === "tools" && <ToolsTab canBackup={isManager} />}
+      </div>
+    </div>
+  );
+};
+
+// ===== GENERAL TAB: Users + Activity Log =====
+const GeneralTab = ({ canManageUsers }: { canManageUsers: boolean }) => {
+  const [sub, setSub] = useState<"users" | "activity">(canManageUsers ? "users" : "activity");
+  const subs = [
+    { id: "users" as const, label: "المستخدمين", icon: Users, show: canManageUsers },
+    { id: "activity" as const, label: "سجل النشاط", icon: FileText, show: true },
+  ].filter(s => s.show);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-1.5">
+        {subs.map(s => (
+          <button key={s.id} onClick={() => setSub(s.id)}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-medium transition-colors ${
+              sub === s.id ? "bg-primary/10 text-primary" : "bg-muted/40 text-muted-foreground hover:bg-muted"
+            }`}>
+            <s.icon className="w-3.5 h-3.5" />{s.label}
+          </button>
+        ))}
+      </div>
+      {sub === "users" && canManageUsers && <UsersTab />}
+      {sub === "activity" && <ActivityLogPanel />}
+    </div>
+  );
+};
+
+// ===== PERMISSIONS HUB: Permissions + Notifications =====
+const PermissionsHub = ({ canManagePerms }: { canManagePerms: boolean }) => {
+  const [sub, setSub] = useState<"permissions" | "notifications">(canManagePerms ? "permissions" : "notifications");
+  const subs = [
+    { id: "permissions" as const, label: "الصلاحيات", icon: Shield, show: canManagePerms },
+    { id: "notifications" as const, label: "الإشعارات", icon: Bell, show: true },
+  ].filter(s => s.show);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-1.5">
+        {subs.map(s => (
+          <button key={s.id} onClick={() => setSub(s.id)}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-medium transition-colors ${
+              sub === s.id ? "bg-primary/10 text-primary" : "bg-muted/40 text-muted-foreground hover:bg-muted"
+            }`}>
+            <s.icon className="w-3.5 h-3.5" />{s.label}
+          </button>
+        ))}
+      </div>
+      {sub === "permissions" && canManagePerms && <PermissionsTab />}
+      {sub === "notifications" && <NotificationsControl />}
+    </div>
+  );
+};
+
+// ===== ACTIVITY LOG PANEL =====
+const ActivityLogPanel = () => {
+  const { data: auditLog } = useAuditLogLazy();
+  return (
+    <div className="bg-card rounded-lg border border-border overflow-hidden">
+      <div className="p-3 border-b border-border"><h3 className="font-bold text-sm text-foreground flex items-center gap-2"><FileText className="w-4 h-4 text-primary" />سجل النشاط</h3></div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs text-right">
+          <thead className="bg-muted/50"><tr><th className="p-2">المستخدم</th><th className="p-2">الإجراء</th><th className="p-2">العنصر</th><th className="p-2">الوقت</th></tr></thead>
+          <tbody>
+            {auditLog.length > 0 ? auditLog.slice(0, 50).map(e => (
+              <tr key={e.id} className="border-t border-border/50"><td className="p-2 font-medium">{e.user_name}</td><td className="p-2"><span className="badge-info">{e.action}</span></td><td className="p-2 text-muted-foreground">{e.target}</td><td className="p-2 text-muted-foreground">{new Date(e.timestamp).toLocaleString("ar-SA")}</td></tr>
+            )) : <tr><td colSpan={4} className="text-center py-6 text-muted-foreground">لا توجد سجلات</td></tr>}
+          </tbody>
+        </table>
       </div>
     </div>
   );
