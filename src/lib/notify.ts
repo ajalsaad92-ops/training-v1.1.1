@@ -3,6 +3,8 @@
 // when the device is fully locked / app closed requires native push (FCM via
 // Capacitor) which needs a Firebase server key — see notes in chat.
 
+import { getNotificationSettings } from "@/lib/notificationSettings";
+
 let audioCtx: AudioContext | null = null;
 
 function getCtx(): AudioContext | null {
