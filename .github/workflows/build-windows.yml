@@ -27,7 +27,14 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Build web app (Vite)
-        run: npm run build
+        run: npm run build:electron
+
+      - name: Verify packaged web files
+        shell: pwsh
+        run: |
+          if (!(Test-Path "dist/index.html")) { throw "dist/index.html is missing" }
+          if (!(Test-Path "dist/assets")) { throw "dist/assets is missing" }
+          Get-ChildItem dist -Recurse | Select-Object -First 40 FullName
 
       - name: Package Windows EXE (electron-builder)
         run: npx electron-builder --win portable --publish never
