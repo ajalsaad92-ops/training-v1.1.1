@@ -131,3 +131,36 @@ export async function persistChanged(): Promise<void> {
   }
   // In cloud mode, persistence is handled automatically
 }
+
+export async function manualPullFromCloud(): Promise<{ ok: boolean; message: string }> {
+  try {
+    state.status = "syncing";
+    notify();
+
+    const data = await forcePull();
+    
+    if (data) {
+      state.status = "connected";
+      state.lastSync = new Date().toISOString();
+      notify();
+      return {
+        ok: true,
+        message: "تم تحديث البيانات من السحابة بنجاح",
+      };
+    } else {
+      state.status = "disconnected";
+      return {
+        ok: false,
+        message: "فشل في سحب البيانات من السحابة",
+      };
+    }
+  } catch (error) {
+    state.status = "error";
+    state.error = error instanceof Error ? error.message : "Unknown error";
+    notify();
+    return {
+      ok: false,
+      message: state.error,
+    };
+  }
+}
