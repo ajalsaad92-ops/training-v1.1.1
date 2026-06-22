@@ -5,6 +5,10 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // Electron loads the packaged app through an internal localhost server and may
+  // fall back to file://. The electron build must therefore use relative asset
+  // paths, while the normal Lovable/web build keeps absolute paths.
+  base: mode === "electron" ? "./" : "/",
   server: {
     host: "::",
     port: 8080,

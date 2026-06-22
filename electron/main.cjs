@@ -7,8 +7,19 @@ const os = require("os");
 const fs = require("fs");
 const http = require("http");
 
-const DIST_DIR = path.join(__dirname, "..", "dist");
 const DEFAULT_PORT = 3000;
+
+function resolveDistDir() {
+  const candidates = [
+    path.join(__dirname, "..", "dist"),
+    path.join(process.resourcesPath || "", "app", "dist"),
+    path.join(process.resourcesPath || "", "dist"),
+    path.join(app.getAppPath(), "dist"),
+  ];
+  return candidates.find((dir) => fs.existsSync(path.join(dir, "index.html"))) || candidates[0];
+}
+
+const DIST_DIR = resolveDistDir();
 
 function log(...args) {
   try {

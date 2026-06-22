@@ -6,6 +6,13 @@ files:
   - dist/**/*
   - electron/**/*
   - package.json
+extraResources:
+  # Safety copy used by electron/main.cjs if files are placed beside resources
+  # instead of inside resources/app on some Windows packaging/extraction paths.
+  - from: dist
+    to: dist
+    filter:
+      - "**/*"
 # asar disabled so the bundled Express server can read dist/ files reliably
 # (serving static files from inside an asar archive is unreliable in production).
 asar: false
