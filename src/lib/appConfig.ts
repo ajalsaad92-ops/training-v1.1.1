@@ -108,6 +108,9 @@ export function isCloudMode(): boolean {
 }
 
 export function isLocalServerHost(): boolean {
+  if (typeof window !== "undefined" && (window.location.protocol === "file:" || new URLSearchParams(window.location.search).get("electron") === "1")) {
+    return true;
+  }
   const c = getConfig();
   return c.mode === "local" && c.serverRole === "server";
 }
