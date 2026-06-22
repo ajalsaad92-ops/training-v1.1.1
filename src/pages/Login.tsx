@@ -5,6 +5,7 @@ import { defaultUserAccounts } from "@/lib/localStore";
 import { Shield, LogIn, Eye, EyeOff, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import ConnectionSetup from "@/components/ConnectionSetup";
 
 const roleLabels: Record<string, string> = {
   admin: "مدير النظام",
@@ -79,6 +80,9 @@ const Login = () => {
           <h1 className="text-2xl font-bold text-primary-foreground">نظام التدريب والإدارة الذكي</h1>
           <p className="text-primary-foreground/70 text-sm mt-2">مركز القيادة والتحكم</p>
         </div>
+
+        {/* Connection / server setup — sits ABOVE the login form */}
+        <ConnectionSetup />
 
         <div className="bg-card rounded-2xl shadow-2xl p-8 border border-border">
           <h2 className="text-xl font-bold text-foreground mb-6 text-center">

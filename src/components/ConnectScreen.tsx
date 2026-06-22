@@ -1,10 +1,12 @@
 ﻿import { useState, useEffect } from "react";
-import { Wifi, WifiOff, Loader2, Monitor, Smartphone, RefreshCw } from "lucide-react";
+import { Wifi, WifiOff, Loader2, Monitor, Smartphone, RefreshCw, Search } from "lucide-react";
+import { discoverServer } from "@/lib/sync/localServerSync";
 
 const ConnectScreen = () => {
   const [ip, setIp] = useState("");
   const [error, setError] = useState("");
   const [testing, setTesting] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -12,12 +14,7 @@ const ConnectScreen = () => {
     if (saved) setIp(saved);
   }, []);
 
-  const handleConnect = async () => {
-    const trimmed = ip.trim();
-    if (!trimmed) {
-      setError("يرجى إدخال عنوان IP الخاص بالحاسوب");
-      return;
-    }
+  const connectTo = async (trimmed: string) => {
     setTesting(true);
     setError("");
     setSuccess(false);
@@ -36,6 +33,29 @@ const ConnectScreen = () => {
       setError("تعذر الاتصال بالخادم. تأكد من أن الحاسوب والهاتف على نفس شبكة WiFi وأن الخادم يعمل");
     }
     setTesting(false);
+  };
+
+  const handleConnect = async () => {
+    const trimmed = ip.trim();
+    if (!trimmed) {
+      setError("يرجى إدخال عنوان IP الخاص بالحاسوب");
+      return;
+    }
+    await connectTo(trimmed);
+  };
+
+  const handleAutoConnect = async () => {
+    setDiscovering(true);
+    setError("");
+    setSuccess(false);
+    const host = await discoverServer();
+    setDiscovering(false);
+    if (host) {
+      setIp(host);
+      await connectTo(host);
+    } else {
+      setError("لم يُعثر على خادم تلقائياً. أدخل عنوان IP يدوياً ثم اضغط اتصال");
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -101,9 +121,27 @@ const ConnectScreen = () => {
           )}
 
           <button
-            onClick={handleConnect}
-            disabled={testing || !ip.trim()}
+            onClick={handleAutoConnect}
+            disabled={testing || discovering}
             className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-primary/90 transition"
+          >
+            {discovering ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                جارٍ البحث عن الخادم...
+              </>
+            ) : (
+              <>
+                <Search className="w-4 h-4" />
+                بحث تلقائي والاتصال
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleConnect}
+            disabled={testing || discovering || !ip.trim()}
+            className="w-full py-3 rounded-xl border border-primary text-primary font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-primary/5 transition"
           >
             {testing ? (
               <>
@@ -113,7 +151,7 @@ const ConnectScreen = () => {
             ) : (
               <>
                 <RefreshCw className="w-4 h-4" />
-                اتصال
+                اتصال يدوي
               </>
             )}
           </button>
