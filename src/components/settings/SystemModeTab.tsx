@@ -205,6 +205,66 @@ const SystemModeTab = () => {
   );
 };
 
+// ===== Server connection info (shown on the host device) =====
+const ServerConnectionInfo = ({ port }: { port: number }) => {
+  const [info, setInfo] = useState<ServerNetworkInfo | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setInfo(await getServerNetworkInfo());
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(text);
+      toast({ title: "تم النسخ", description: text });
+      setTimeout(() => setCopied(null), 1500);
+    } catch {
+      toast({ title: "تعذّر النسخ", variant: "destructive" });
+    }
+  };
+
+  const activePort = info?.port || port || 3000;
+  const addresses = (info?.ips || []).map((ip) => `${ip.address}:${activePort}`);
+
+  return (
+    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold flex items-center gap-1.5"><Network className="w-4 h-4 text-primary" />عنوان الاتصال للأجهزة الأخرى</span>
+        <Button size="sm" variant="ghost" className="h-6 gap-1 text-[10px]" onClick={refresh} disabled={loading}>
+          {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}تحديث
+        </Button>
+      </div>
+      <p className="text-[10px] text-muted-foreground">
+        افتح التطبيق على الهاتف أو الحاسوب الآخر (على نفس شبكة WiFi) وأدخل أحد العناوين التالية، أو استخدم زر «بحث تلقائي».
+      </p>
+      {addresses.length ? (
+        <div className="space-y-1.5">
+          {addresses.map((addr) => (
+            <div key={addr} className="flex items-center justify-between gap-2 rounded-md border border-border bg-background px-2.5 py-1.5">
+              <span className="text-xs font-mono font-medium" dir="ltr">{addr}</span>
+              <Button size="sm" variant="outline" className="h-6 gap-1 text-[10px]" onClick={() => copy(addr)}>
+                {copied === addr ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+                {copied === addr ? "تم" : "نسخ"}
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-[10px] text-muted-foreground bg-background rounded-md border border-border px-2.5 py-2">
+          {loading ? "جارٍ قراءة عناوين الشبكة..." : "يظهر العنوان عند تشغيل خادم سطح المكتب (نسخة Windows). تأكد من تشغيل البرنامج كخادم."}
+        </p>
+      )}
+    </div>
+  );
+};
+
 // ===== Connected devices monitor =====
 const DeviceMonitor = () => {
   const [devices, setDevices] = useState<ConnectedDevice[]>([]);
