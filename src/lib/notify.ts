@@ -3,6 +3,8 @@
 // when the device is fully locked / app closed requires native push (FCM via
 // Capacitor) which needs a Firebase server key — see notes in chat.
 
+import { getNotificationSettings } from "@/lib/notificationSettings";
+
 let audioCtx: AudioContext | null = null;
 
 function getCtx(): AudioContext | null {
@@ -96,9 +98,11 @@ export function showSystemNotification(title: string, body: string, onClick?: ()
   }
 }
 
-/** Full alert: sound + vibration + system notification. */
+/** Full alert: sound + vibration + system notification (respects user settings). */
 export function alertUser(title: string, body: string, onClick?: () => void) {
-  playNotificationSound();
-  vibrate();
-  showSystemNotification(title, body, onClick);
+  const s = getNotificationSettings();
+  if (!s.enabled) return;
+  if (s.sound) playNotificationSound();
+  if (s.vibration) vibrate();
+  if (s.system) showSystemNotification(title, body, onClick);
 }
