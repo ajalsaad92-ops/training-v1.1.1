@@ -1,8 +1,9 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
-import { startSync } from "@/lib/supabaseSync";
+import { initSync } from "@/lib/sync/syncManager";
 
-startSync();
+// Boots the right sync engine for the active mode (cloud real-time vs. local server).
+initSync();
 
 createRoot(document.getElementById("root")!).render(<App />);

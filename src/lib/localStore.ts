@@ -1,4 +1,4 @@
-import { debouncedPush, getServerAvailable } from "@/lib/supabaseSync";
+import { persistChanged } from "@/lib/sync/syncManager";
 import {
   SEED_EMPLOYEES, SEED_PROFILES, SEED_USER_ACCOUNTS, SEED_CURRICULUM,
   SEED_COURSES, SEED_TRAINEES, SEED_HR, SEED_CORRESPONDENCE, SEED_TASKS,
@@ -498,7 +498,9 @@ function saveStore() {
   if (!store) return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-    if (getServerAvailable()) debouncedPush();
+    // Route persistence through the sync manager: cloud push in cloud mode,
+    // local-server push in local mode (never the cloud in local mode).
+    persistChanged();
     try { window.dispatchEvent(new CustomEvent("tms_store_changed")); } catch { /* noop */ }
   } catch { /* ignore write errors */ }
 }
