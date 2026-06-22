@@ -203,7 +203,12 @@ async function createWindow() {
   const indexFile = path.join(DIST_DIR, "index.html");
   if (fs.existsSync(indexFile)) {
     mainWindow.loadFile(indexFile, {
-      query: { electron: "1", tmsApiPort: String(activePort), server: serverStarted ? "1" : "0" },
+      query: {
+        electron: "1",
+        tmsApiPort: String(activePort),
+        server: serverStarted ? "1" : "0",
+        tmsHost: ips[0]?.address || "",
+      },
     });
   } else if (serverStarted) {
     mainWindow.loadURL(`http://localhost:${activePort}`);
