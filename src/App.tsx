@@ -13,7 +13,8 @@ import ConnectScreen from "@/components/ConnectScreen";
 import { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { startScheduler } from "@/lib/scheduledReports";
 import { Loader2 } from "lucide-react";
-import { getRuntimeApiBaseUrl, isElectronRuntime } from "@/lib/runtime";
+// FIX #5: Added isNativePlatform for reliable Capacitor detection
+import { getRuntimeApiBaseUrl, isElectronRuntime, isNativePlatform } from "@/lib/runtime";
 
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const HRAttendance = lazy(() => import("@/pages/HRAttendance"));
@@ -60,7 +61,6 @@ const RoutePersistence = ({ user }: { user: unknown }) => {
   const navigate = useNavigate();
   const restored = useRef(false);
 
-  // Restore the saved route once, right after the user is authenticated.
   useEffect(() => {
     if (!user || restored.current) return;
     restored.current = true;
@@ -71,7 +71,6 @@ const RoutePersistence = ({ user }: { user: unknown }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // Save the current route whenever it changes (skip auth/survey routes).
   useEffect(() => {
     if (!user) return;
     const path = location.pathname + location.search;
@@ -87,9 +86,28 @@ const AppRoutes = () => {
   const { has } = useUserRole();
   const [serverOk, setServerOk] = useState<boolean | null>(null);
 
+  // FIX #1 + #5: Extracted to function so it can be called from the config-change listener.
+  // getRuntimeApiBaseUrl() returns the correct base URL for Electron, Capacitor, and web.
+  const checkServer = () => {
+    const base = getRuntimeApiBaseUrl();
+    fetch(`${base}/api/ping`)
+      .then(r => r.json())
+      .then(j => setServerOk(j.ok === true))
+      .catch(() => setServerOk(false));
+  };
+
   useEffect(() => {
-    fetch(`${getRuntimeApiBaseUrl()}/api/ping`).then(r => r.json()).then(j => setServerOk(j.ok === true)).catch(() => setServerOk(false));
+    checkServer();
     startScheduler();
+  }, []);
+
+  // FIX #5: Re-ping when appConfig changes (ConnectScreen calls setConfig → dispatches
+  // tms_config_changed → this fires → checkServer uses new host → serverOk becomes true
+  // → ConnectScreen unmounts automatically, no window.location.href needed).
+  useEffect(() => {
+    const handler = () => checkServer();
+    window.addEventListener("tms_config_changed", handler);
+    return () => window.removeEventListener("tms_config_changed", handler);
   }, []);
 
   if (loading) return <div className="h-screen w-full flex items-center justify-center"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>;
@@ -97,7 +115,8 @@ const AppRoutes = () => {
   if (serverOk === false && !window.location.pathname.startsWith("/survey")) {
     const host = window.location.hostname;
     const isHostedApp = /lovable\.(app|dev)$|lovableproject\.com$|vercel\.app$|netlify\.app$/i.test(host);
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    // FIX #5: isNativePlatform() is the authoritative Capacitor check (not just UA sniff)
+    const isMobile = isNativePlatform() || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     if (isMobile && !isHostedApp) return <ConnectScreen />;
   }
 
@@ -122,7 +141,6 @@ const AppRoutes = () => {
         <Route path="activity-log" element={<PermissionRoute permission={has("view_activity_log")}><Suspense fallback={<PageLoader />}><ActivityLog /></Suspense></PermissionRoute>} />
         <Route path="tasks" element={<PermissionRoute permission={has("view_tasks")}><Suspense fallback={<PageLoader />}><Tasks /></Suspense></PermissionRoute>} />
         <Route path="hr" element={<PermissionRoute permission={has("view_hr")}><Suspense fallback={<PageLoader />}><HRAttendance /></Suspense></PermissionRoute>} />
-
         <Route path="courses" element={<PermissionRoute permission={has("view_courses")}><Suspense fallback={<PageLoader />}><Courses /></Suspense></PermissionRoute>} />
         <Route path="training-plan" element={<PermissionRoute permission={has("view_training_plan")}><Suspense fallback={<PageLoader />}><TrainingPlan /></Suspense></PermissionRoute>} />
         <Route path="archive" element={<PermissionRoute permission={has("view_archive")}><Suspense fallback={<PageLoader />}><Archive /></Suspense></PermissionRoute>} />
@@ -137,7 +155,10 @@ const AppRoutes = () => {
   );
 };
 
-const Router = isElectronRuntime() ? HashRouter : BrowserRouter;
+// FIX #5: Use HashRouter on Capacitor native to prevent route breakage on refresh.
+// BrowserRouter breaks on Capacitor because the webview uses a custom scheme (capacitor://)
+// with no real server to resolve deep links — HashRouter avoids this entirely.
+const Router = (isElectronRuntime() || isNativePlatform()) ? HashRouter : BrowserRouter;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -146,7 +167,7 @@ const App = () => (
       <Sonner />
       <AuthProvider>
         <UIThemeProvider>
-          <Router future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+          <Router>
             <AppRoutes />
             <ErrorMonitor />
           </Router>
