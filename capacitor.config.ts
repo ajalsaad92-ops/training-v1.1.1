@@ -5,34 +5,35 @@ const config: CapacitorConfig = {
   appName: 'نظام التدريب',
   webDir: 'dist',
   server: {
-    androidScheme: 'http',
-    // FIX #6: Allow the webview to navigate to LAN addresses so it can reach
-    // the local Express server running on the laptop (192.168.x.x:3003).
-    // Without this Capacitor blocks all non-localhost HTTP requests.
+    // استخدام http (وليس https) للسماح بالاتصال بالخادم المحلي
+    androidScheme: "http",
+    // السماح بالتنقل لعناوين الشبكة المحلية
     allowNavigation: [
-      '192.168.*.*',
-      '10.*.*.*',
-      '172.16.*.*',
-      '172.17.*.*',
-      '172.18.*.*',
-      '172.19.*.*',
-      '172.20.*.*',
-      '172.21.*.*',
-      '172.22.*.*',
-      '172.23.*.*',
-      '172.24.*.*',
-      '172.25.*.*',
-      '172.26.*.*',
-      '172.27.*.*',
-      '172.28.*.*',
-      '172.29.*.*',
-      '172.30.*.*',
-      '172.31.*.*',
-      'localhost',
+      'http://192.168.*',
+      'http://10.*',
+      'http://172.16.*',
+      'http://172.17.*',
+      'http://172.18.*',
+      'http://172.19.*',
+      'http://172.20.*',
+      'http://172.21.*',
+      'http://172.22.*',
+      'http://172.23.*',
+      'http://172.24.*',
+      'http://172.25.*',
+      'http://172.26.*',
+      'http://172.27.*',
+      'http://172.28.*',
+      'http://172.29.*',
+      'http://172.30.*',
+      'http://172.31.*',
+      'http://localhost:*',
     ],
+    // تحديد hostname للـ webview
+    hostname: 'tms.app',
   },
   android: {
-    // FIX #6: Allow mixed HTTP content from within the HTTPS-based webview.
+    // السماح بالمحتوى المختلط (HTTP في سياق HTTPS)
     allowMixedContent: true,
   },
 };

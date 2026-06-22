@@ -1,206 +1,81 @@
-/**
- * localServerSync — CONNECTION + LOCAL STORAGE adapter for Local/Offline mode.
- *
- * Responsibilities:
- * - Resolve the base URL of the central local server (the chosen Windows host).
- * - Persist the shared store to the local server.
- * - Pull the shared store from the local server.
- * - Register a heartbeat so the server can monitor connected devices.
- * - List connected devices (server-side admin view).
- * - Best-effort auto-discovery of the server on the LAN.
- *
- * FIX #4: discoverServer() now scans 192.168.x.x / 10.x.x.x LAN ranges.
- * FIX #8: getLocalServerBaseUrl() falls back to tms_laptop_ip when host is 127.0.0.1.
- */
-import { getConfig, isLocalServerHost } from "@/lib/appConfig";
-import { getDeviceIdentity } from "@/lib/deviceIdentity";
-import { getRuntimeApiBaseUrl, isElectronRuntime } from "@/lib/runtime";
+// localServerSync.ts — Sync with local Express server (Electron or LAN)
 
-const STORAGE_KEY = "tms_local_store";
-const PUSH_DEBOUNCE = 800;
-let pushTimer: ReturnType<typeof setTimeout> | null = null;
-let isPushing = false;
-let serverAvailable = false;
-let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-let pollTimer: ReturnType<typeof setInterval> | null = null;
-let onRemote: ((data: Record<string, unknown>) => void) | null = null;
-let lastLocalTs = 0;
+import { getConfig } from "@/lib/appConfig";
+import { getRuntimeApiBaseUrl, isCapacitorNative } from "@/lib/runtime";
 
-export interface ConnectedDevice {
-  id: string;
-  name: string;
-  type: string;
-  ip: string;
-  online: boolean;
-  blocked?: boolean;
-  lastSeen: string;
-  firstSeen?: string;
-}
+const DEFAULT_PORT = 3000;
 
-/**
- * Build the base URL used to reach the local server from THIS device.
- *
- * FIX #8: When appConfig.localServer.host is still the default "127.0.0.1" (phone never
- * configured it), fall back to the legacy localStorage key "tms_laptop_ip" before giving up.
- * This ensures phones that used older app versions still connect correctly.
- */
+/* ──────────────────────────────────────────────
+   Base URL for local server
+   ────────────────────────────────────────────── */
 export function getLocalServerBaseUrl(): string {
-  if (isElectronRuntime()) return getRuntimeApiBaseUrl();
+  const runtimeUrl = getRuntimeApiBaseUrl();
+  if (runtimeUrl) return runtimeUrl;
 
-  // When this device IS the host, talk to local server via same origin / localhost.
-  if (isLocalServerHost()) {
-    if (
-      typeof window !== "undefined" &&
-      window.location?.origin &&
-      !window.location.origin.startsWith("http://localhost:8080")
-    ) {
-      return window.location.origin;
+  const cfg = getConfig();
+  const { host, port } = cfg.localServer;
+
+  if (!host || (isCapacitorNative() && (host === "127.0.0.1" || host === "localhost"))) {
+    const legacyIp = localStorage.getItem("tms_laptop_ip");
+    if (legacyIp) {
+      const normalized = legacyIp.startsWith("http") ? legacyIp : `http://${legacyIp}`;
+      return /:\d+$/.test(normalized) ? normalized : `${normalized}:${port || DEFAULT_PORT}`;
     }
-    const { port } = getConfig().localServer;
-    return `http://localhost:${port}`;
+    return "";
   }
 
-  const { host, port } = getConfig().localServer;
-
-  // FIX #8: If host is still the default "127.0.0.1" or empty, try legacy key.
-  let effectiveHost = host;
-  if ((!host || host === "127.0.0.1") && typeof localStorage !== "undefined") {
-    const savedIp = localStorage.getItem("tms_laptop_ip");
-    if (savedIp) effectiveHost = savedIp;
-  }
-
-  if (!effectiveHost || effectiveHost === "127.0.0.1") return "";
-  const normalized = effectiveHost.startsWith("http") ? effectiveHost : `http://${effectiveHost}`;
-  return /:\d+$/.test(normalized) ? normalized : `${normalized}:${port}`;
+  const normalized = host.startsWith("http") ? host : `http://${host}`;
+  return /:\d+$/.test(normalized) ? normalized : `${normalized}:${port || DEFAULT_PORT}`;
 }
 
-export function getLocalServerAvailable(): boolean {
-  return serverAvailable;
-}
-
-async function fetchJson(
-  path: string,
-  init?: RequestInit,
-  timeoutMs = 5000
-): Promise<any> {
-  const base = getLocalServerBaseUrl();
-  if (!base) throw new Error("no_server");
-  const res = await fetch(base + path, {
-    ...init,
-    signal: AbortSignal.timeout(timeoutMs),
-    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
-  });
-  return res.json();
-}
-
-/** Ping the local server and cache availability. */
-export async function pingLocalServer(): Promise<boolean> {
+/* ──────────────────────────────────────────────
+   Ping / Health check
+   ────────────────────────────────────────────── */
+export async function pingLocalServer(customUrl?: string): Promise<boolean> {
   try {
-    const j = await fetchJson("/api/ping", undefined, 4000);
-    serverAvailable = j?.ok === true;
+    const baseUrl = customUrl || getLocalServerBaseUrl();
+    if (!baseUrl) return false;
+    const res = await fetch(`${baseUrl}/api/ping`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    const data = await res.json();
+    return data.ok === true;
   } catch {
-    serverAvailable = false;
+    return false;
   }
-  return serverAvailable;
 }
 
-/** Pull the shared store from the local server into localStorage. */
+/* ──────────────────────────────────────────────
+   Data push / pull — compatible with electron/main.js
+   endpoint: /api/store (GET + PUT)
+   ────────────────────────────────────────────── */
+export async function pushToLocalServer(data: Record<string, unknown>): Promise<boolean> {
+  try {
+    const baseUrl = getLocalServerBaseUrl();
+    if (!baseUrl) return false;
+    const res = await fetch(`${baseUrl}/api/store`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data }),
+    });
+    const result = await res.json();
+    return result.ok === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function pullFromLocalServer(): Promise<Record<string, unknown> | null> {
   try {
-    const j = await fetchJson("/api/store");
-    if (j?.ok && j.data) return j.data as Record<string, unknown>;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-/** Push the current localStorage store to the local server. */
-export async function pushToLocalServer(): Promise<boolean> {
-  if (isPushing) return false;
-  isPushing = true;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) { isPushing = false; return false; }
-    const j = await fetchJson("/api/store", {
-      method: "PUT",
-      body: JSON.stringify({ data: JSON.parse(raw) }),
+    const baseUrl = getLocalServerBaseUrl();
+    if (!baseUrl) return null;
+    const res = await fetch(`${baseUrl}/api/store`, {
+      signal: AbortSignal.timeout(5000),
     });
-    isPushing = false;
-    return j?.ok === true;
-  } catch {
-    isPushing = false;
-    return false;
-  }
-}
-
-export function debouncedLocalPush() {
-  if (pushTimer) clearTimeout(pushTimer);
-  pushTimer = setTimeout(() => { pushToLocalServer(); }, PUSH_DEBOUNCE);
-}
-
-function applyRemote(data: Record<string, unknown>) {
-  try {
-    const localRaw = localStorage.getItem(STORAGE_KEY);
-    const local = localRaw ? JSON.parse(localRaw) : {};
-    const merged = { ...local, ...data };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-    window.dispatchEvent(new CustomEvent("tms_remote_update"));
-    window.dispatchEvent(new CustomEvent("tms_store_changed"));
-    if (onRemote) onRemote(merged);
-  } catch { /* noop */ }
-}
-
-/** Register / refresh this device with the server so it can be monitored. */
-export async function sendHeartbeat(): Promise<boolean> {
-  try {
-    const id = getDeviceIdentity();
-    const j = await fetchJson("/api/heartbeat", {
-      method: "POST",
-      body: JSON.stringify({ id: id.id, name: id.name, type: id.type, platform: id.platform }),
-    }, 4000);
-    return j?.ok === true;
-  } catch {
-    return false;
-  }
-}
-
-/** Admin: list devices the server currently knows about. */
-export async function getConnectedDevices(): Promise<ConnectedDevice[]> {
-  try {
-    const j = await fetchJson("/api/devices");
-    return Array.isArray(j?.devices) ? j.devices : [];
-  } catch {
-    return [];
-  }
-}
-
-/** Admin: block / unblock a client device. */
-export async function setDeviceBlocked(deviceId: string, blocked: boolean): Promise<boolean> {
-  try {
-    const j = await fetchJson(`/api/devices/${deviceId}/block`, {
-      method: "POST",
-      body: JSON.stringify({ blocked }),
-    });
-    return j?.ok === true;
-  } catch {
-    return false;
-  }
-}
-
-export interface ServerNetworkInfo {
-  ips: { iface: string; address: string }[];
-  port: number;
-}
-
-export async function getServerNetworkInfo(): Promise<ServerNetworkInfo | null> {
-  try {
-    const j = await fetchJson("/api/ip", undefined, 4000);
-    if (j?.ok) {
-      return {
-        ips: Array.isArray(j.ips) ? j.ips : [],
-        port: typeof j.port === "number" ? j.port : getConfig().localServer.port,
-      };
+    if (!res.ok) return null;
+    const result = await res.json();
+    if (result.ok && result.data) {
+      return result.data;
     }
     return null;
   } catch {
@@ -208,134 +83,102 @@ export async function getServerNetworkInfo(): Promise<ServerNetworkInfo | null> 
   }
 }
 
-// ─── LAN Discovery ───────────────────────────────────────────────────────────
+/* ──────────────────────────────────────────────
+   Auto-discover server on LAN
+   ────────────────────────────────────────────── */
+function buildCandidateList(): string[] {
+  const candidates: string[] = [];
 
-/**
- * Probe a single candidate host. Returns the host string if server is found.
- * Uses /api/discover (lightweight endpoint that returns { ok, role: "server" }).
- */
-async function probeCandidate(host: string, port: number): Promise<string | null> {
-  try {
-    const base = host.startsWith("http") ? host : `http://${host}:${port}`;
-    const res = await fetch(`${base}/api/discover`, { signal: AbortSignal.timeout(1200) });
-    const j = await res.json();
-    if (j?.ok && j?.role === "server") return host;
-  } catch { /* try next */ }
-  return null;
+  const cfg = getConfig();
+  if (cfg.localServer.host &&
+      cfg.localServer.host !== "127.0.0.1" &&
+      cfg.localServer.host !== "localhost" &&
+      cfg.localServer.host !== "") {
+    candidates.push(cfg.localServer.host);
+  }
+
+  const legacyIp = localStorage.getItem("tms_laptop_ip");
+  if (legacyIp && !candidates.includes(legacyIp)) {
+    candidates.push(legacyIp);
+  }
+
+  if (!isCapacitorNative()) {
+    candidates.push("localhost", "127.0.0.1");
+  }
+
+  const commonPrefixes = [
+    "192.168.1", "192.168.0", "192.168.43", "192.168.137",
+    "10.0.0", "10.0.1", "172.16.0",
+  ];
+
+  for (const prefix of commonPrefixes) {
+    for (let i = 1; i <= 15; i++) {
+      const addr = `${prefix}.${i}`;
+      if (!candidates.includes(addr)) candidates.push(addr);
+    }
+    for (const suffix of [100, 101, 102, 150, 200, 254]) {
+      const addr = `${prefix}.${suffix}`;
+      if (!candidates.includes(addr)) candidates.push(addr);
+    }
+  }
+
+  return candidates;
 }
 
-/**
- * Scan a batch of candidates in parallel.
- * FIX #4: Called with LAN subnet ranges so we actually find the laptop on WiFi.
- */
-async function scanParallel(
-  candidates: string[],
-  port: number,
-  batchSize = 40
-): Promise<string | null> {
-  for (let i = 0; i < candidates.length; i += batchSize) {
-    const batch = candidates.slice(i, i + batchSize);
-    const results = await Promise.allSettled(batch.map(c => probeCandidate(c, port)));
-    for (const r of results) {
-      if (r.status === "fulfilled" && r.value) return r.value;
+export async function discoverServer(): Promise<string | null> {
+  const candidates = buildCandidateList();
+  const port = getConfig().localServer.port || DEFAULT_PORT;
+  const BATCH_SIZE = 15;
+
+  for (let i = 0; i < candidates.length; i += BATCH_SIZE) {
+    const batch = candidates.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map(async (host) => {
+        const url = host.startsWith("http") ? host : `http://${host}:${port}`;
+        const pingUrl = /:\d+$/.test(url) ? url : `${url}:${port}`;
+        const res = await fetch(`${pingUrl}/api/ping`, {
+          signal: AbortSignal.timeout(1500),
+        });
+        const data = await res.json();
+        if (data.ok) return host;
+        throw new Error("not ok");
+      })
+    );
+    for (const result of results) {
+      if (result.status === "fulfilled" && result.value) {
+        return result.value;
+      }
     }
   }
   return null;
 }
 
-/**
- * Generate LAN IP candidates for the most common private subnets.
- * FIX #4: Covers 192.168.0–5.x (home/office), 10.0.0–1.x (corporate).
- */
-function generateLanCandidates(): string[] {
-  const ips: string[] = [];
-  // 192.168.0.x – 192.168.5.x  (most home routers are in this range)
-  for (let sub = 0; sub <= 5; sub++) {
-    for (let h = 1; h <= 254; h++) ips.push(`192.168.${sub}.${h}`);
-  }
-  // 10.0.0.x, 10.0.1.x (common corporate / VPN subnets)
-  for (let h = 1; h <= 254; h++) {
-    ips.push(`10.0.0.${h}`);
-    ips.push(`10.0.1.${h}`);
-  }
-  return ips;
-}
+/* ──────────────────────────────────────────────
+   Sync orchestration
+   ────────────────────────────────────────────── */
+let syncInterval: ReturnType<typeof setInterval> | null = null;
 
-/**
- * Best-effort discovery of the local server on the LAN.
- *
- * FIX #4: Phase 2 now scans 192.168.x.x / 10.x.x.x ranges in parallel batches,
- *   so the function actually finds the laptop on a home/office WiFi network.
- *   Previously only checked localhost/127.0.0.1 — which never works on mobile.
- *
- * @returns the host string of the first responding server, or null.
- */
-export async function discoverServer(extraCandidates: string[] = []): Promise<string | null> {
-  const { host, port } = getConfig().localServer;
-
-  // Phase 1: Quick candidates — check saved/known addresses first for instant connection.
-  const quickSet = new Set<string>([
-    host,
-    typeof window !== "undefined" ? window.location.hostname : "",
-    "localhost",
-    "127.0.0.1",
-    ...extraCandidates,
-  ]);
-
-  // Include legacy localStorage IP if present.
-  if (typeof localStorage !== "undefined") {
-    const legacy = localStorage.getItem("tms_laptop_ip");
-    if (legacy) quickSet.add(legacy);
-  }
-
-  for (const c of quickSet) {
-    if (!c) continue;
-    const found = await probeCandidate(c, port);
-    if (found) return found;
-  }
-
-  // Phase 2: Full LAN scan — 192.168.x.x / 10.x.x.x in parallel batches.
-  // FIX #4: This is the critical step that was previously missing.
-  const lanCandidates = generateLanCandidates();
-  const lanFound = await scanParallel(lanCandidates, port);
-  if (lanFound) return lanFound;
-
-  return null;
-}
-
-/** Start local-mode background sync: heartbeat + periodic pull from the server. */
-export function startLocalSync(callback?: (data: Record<string, unknown>) => void) {
-  onRemote = callback || null;
+export function startLocalSync(
+  pullCallback: (data: Record<string, unknown>) => void,
+  intervalMs = 5000
+): void {
   stopLocalSync();
-
-  const boot = async () => {
-    await pingLocalServer();
-    if (serverAvailable) {
-      const data = await pullFromLocalServer();
-      if (data) applyRemote(data);
-      await sendHeartbeat();
-    }
-  };
-  boot();
-
-  // Heartbeat every 10 s so the server's "connected devices" view stays current.
-  heartbeatTimer = setInterval(() => { sendHeartbeat(); }, 10_000);
-
-  // Poll for changes every 5 s. Keeps clients in sync with the host.
-  pollTimer = setInterval(async () => {
-    if (!serverAvailable) { await pingLocalServer(); return; }
+  const doSync = async () => {
     const data = await pullFromLocalServer();
-    if (data) {
-      const ts = (data as any)?.__ts || 0;
-      if (ts && ts <= lastLocalTs) return;
-      lastLocalTs = ts || Date.now();
-      applyRemote(data);
-    }
-  }, 5_000);
+    if (data) pullCallback(data);
+  };
+  doSync();
+  syncInterval = setInterval(doSync, intervalMs);
 }
 
-export function stopLocalSync() {
-  if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-  if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
+export function stopLocalSync(): void {
+  if (syncInterval) {
+    clearInterval(syncInterval);
+    syncInterval = null;
+  }
+}
+
+export function reinitSync(pullCallback: (data: Record<string, unknown>) => void): void {
+  stopLocalSync();
+  startLocalSync(pullCallback);
 }

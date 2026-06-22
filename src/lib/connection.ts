@@ -1,94 +1,117 @@
-/**
- * connection — login-time connection orchestration for Local/Offline mode.
- *
- * Behaviour (requested):
- *  - The LOGIN button first checks whether a local server is already running.
- *      - If found  -> connect automatically as a CLIENT, then sign in normally.
- *      - If not, and this device CAN be the central server (the desktop app) -> ask the
- *        user to start the server (storage path + IP/port), then sign in.
- *      - On the phone (client only) -> never create a server; search/connect to the one
- *        central machine, then sign in.
- */
+// connection.ts — Connection management for phone ↔ laptop
 
 import { getConfig, setConfig } from "@/lib/appConfig";
-import { isElectronRuntime } from "@/lib/runtime";
-import { reinitSync } from "@/lib/sync/syncManager";
-import { discoverServer, pingLocalServer } from "@/lib/sync/localServerSync";
+import { isCapacitorNative, isElectronRuntime, isMobileDevice } from "@/lib/runtime";
+import { pingLocalServer, discoverServer } from "@/lib/sync/localServerSync";
 
-/** True on a real phone (Capacitor native) or a mobile browser that is not the desktop app. */
-export function isMobileRuntime(): boolean {
-  if (typeof window === "undefined") return false;
-  const cap = (window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
-  if (cap?.isNativePlatform?.()) return true;
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && !isElectronRuntime();
+export type ConnectionStatus = "connected" | "disconnected" | "searching" | "connecting" | "standalone";
+
+interface ConnectionState {
+  status: ConnectionStatus;
+  serverIp: string | null;
+  lastChecked: string | null;
 }
 
-/** Only the desktop (Electron) app may host the single central server. */
-export function canHostServer(): boolean {
-  return isElectronRuntime();
+let connState: ConnectionState = {
+  status: "disconnected",
+  serverIp: null,
+  lastChecked: null,
+};
+
+let listeners: Array<(s: ConnectionState) => void> = [];
+
+function notifyConnection() {
+  listeners.forEach((fn) => fn({ ...connState }));
 }
 
-export type LoginConnectionStatus =
-  | "connected"    // a local server is reachable; ready to sign in
-  | "is-server"    // this device IS the central server; ready to sign in
-  | "need-server"  // desktop with no server yet -> prompt to start it
-  | "no-server"    // client (phone/other) found no server -> search/connect manually
-  | "cloud";       // cloud mode -> sign in normally
+export function onConnectionChange(fn: (s: ConnectionState) => void): () => void {
+  listeners.push(fn);
+  return () => {
+    listeners = listeners.filter((f) => f !== fn);
+  };
+}
 
-export async function prepareLoginConnection(): Promise<LoginConnectionStatus> {
-  const cfg = getConfig();
+export function getConnectionStatus(): ConnectionState {
+  return { ...connState };
+}
 
-  // Pure cloud mode on a normal browser: nothing to connect to.
-  if (cfg.mode === "cloud" && !isElectronRuntime() && !isMobileRuntime()) {
-    return "cloud";
-  }
-
-  // The central server machine = the desktop (Electron) app.
-  // Its API server is started inside the Electron MAIN process before the window
-  // loads, so it is authoritative and always considered running here. We never block
-  // desktop login on a ping (a transient ping failure must NOT show "start the
-  // desktop version" — this IS the desktop version).
+export async function autoConnect(): Promise<boolean> {
   if (isElectronRuntime()) {
-    if (cfg.mode !== "local" || cfg.serverRole !== "server") {
-      setConfig({ mode: "local", serverRole: "server" });
-      reinitSync();
+    connState = { status: "connected", serverIp: "localhost", lastChecked: new Date().toISOString() };
+    notifyConnection();
+    return true;
+  }
+
+  connState.status = "searching";
+  notifyConnection();
+
+  const config = getConfig();
+  if (config.localServer.host &&
+      config.localServer.host !== "127.0.0.1" &&
+      config.localServer.host !== "localhost" &&
+      config.localServer.host !== "") {
+    connState.status = "connecting";
+    notifyConnection();
+    const alive = await pingLocalServer();
+    if (alive) {
+      connState = { status: "connected", serverIp: config.localServer.host, lastChecked: new Date().toISOString() };
+      notifyConnection();
+      return true;
     }
-    // Best-effort warm-up ping (ignored on failure); login proceeds regardless.
-    pingLocalServer().catch(() => {});
-    return "is-server";
   }
 
-  // Client devices (phone / other laptop): discover the central server on the LAN.
-  const host = await discoverServer();
-  if (host) {
-    setConfig({ mode: "local", serverRole: "client", localServer: { ...cfg.localServer, host } });
-    reinitSync();
-    if (await pingLocalServer()) return "connected";
+  const found = await discoverServer();
+  if (found) {
+    setConfig({ mode: "local", localServer: { ...config.localServer, host: found } });
+    connState = { status: "connected", serverIp: found, lastChecked: new Date().toISOString() };
+    notifyConnection();
+    return true;
   }
 
-  // Fall back to a previously saved host.
-  if (cfg.localServer.host) {
-    setConfig({ mode: "local", serverRole: "client" });
-    reinitSync();
-    if (await pingLocalServer()) return "connected";
+  if (isCapacitorNative() || isMobileDevice()) {
+    connState = { status: "standalone", serverIp: null, lastChecked: new Date().toISOString() };
+    notifyConnection();
+    return false;
   }
 
-  // No server reachable: switch this device into local-client so the connection panel shows.
-  setConfig({ mode: "local", serverRole: "client" });
-  return "no-server";
+  connState = { status: "disconnected", serverIp: null, lastChecked: new Date().toISOString() };
+  notifyConnection();
+  return false;
 }
 
-/** Start the central server on this (desktop) device using the chosen storage path + port. */
-export async function startCentralServer(opts: { port: number; storagePath: string }): Promise<boolean> {
-  setConfig({
-    mode: "local",
-    serverRole: "server",
-    storagePath: opts.storagePath,
-    localServer: { ...getConfig().localServer, port: opts.port },
-  });
-  reinitSync();
-  // The desktop main process already serves the API. Try to confirm, but on the
-  // desktop app treat the server as running even if the ping is slow/blocked.
-  const ok = await pingLocalServer();
-  return ok || isElectronRuntime();
+export async function connectToServer(ip: string): Promise<boolean> {
+  const cleanIp = ip.trim();
+  const base = cleanIp.startsWith("http") ? cleanIp : `http://${cleanIp}`;
+  const port = getConfig().localServer.port || 3000;
+  const hasPort = base.indexOf(":", base.indexOf("://") + 3) > -1;
+  const url = hasPort ? base : `${base}:${port}`;
+
+  try {
+    const res = await fetch(`${url}/api/ping`, { signal: AbortSignal.timeout(5000) });
+    const data = await res.json();
+    if (data.ok) {
+      setConfig({ mode: "local", localServer: { host: cleanIp, port, autoSync: true } });
+      connState = { status: "connected", serverIp: cleanIp, lastChecked: new Date().toISOString() };
+      notifyConnection();
+      return true;
+    }
+  } catch { /* fail */ }
+
+  connState = { status: "disconnected", serverIp: null, lastChecked: new Date().toISOString() };
+  notifyConnection();
+  return false;
+}
+
+export function enableStandaloneMode(): void {
+  connState = { status: "standalone", serverIp: null, lastChecked: new Date().toISOString() };
+  notifyConnection();
+}
+
+export function isStandalone(): boolean {
+  return connState.status === "standalone";
+}
+
+export function disconnect(): void {
+  connState = { status: "disconnected", serverIp: null, lastChecked: new Date().toISOString() };
+  notifyConnection();
 }

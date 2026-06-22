@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { UIThemeProvider } from "@/contexts/UIThemeContext";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -10,11 +10,11 @@ import Layout from "@/components/Layout";
 import ErrorMonitor from "@/components/ErrorMonitor";
 import Login from "@/pages/Login";
 import ConnectScreen from "@/components/ConnectScreen";
-import { lazy, Suspense, useState, useEffect, useRef } from "react";
+import { lazy, Suspense, useState, useEffect, useCallback } from "react";
 import { startScheduler } from "@/lib/scheduledReports";
 import { Loader2 } from "lucide-react";
-// FIX #5: Added isNativePlatform for reliable Capacitor detection
-import { getRuntimeApiBaseUrl, isElectronRuntime, isNativePlatform } from "@/lib/runtime";
+import { isCapacitorNative, isMobileDevice, getRuntimeApiBaseUrl } from "@/lib/runtime";
+import { getConfig } from "@/lib/appConfig";
 
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const HRAttendance = lazy(() => import("@/pages/HRAttendance"));
@@ -39,6 +39,12 @@ const PageLoader = () => (
 
 const queryClient = new QueryClient();
 
+// ✅ اختيار الراوتر بناءً على المنصة
+const Router = (isCapacitorNative() || isMobileDevice()) ? HashRouter : BrowserRouter;
+const routerProps = (isCapacitorNative() || isMobileDevice()) 
+  ? {} 
+  : { future: { v7_relativeSplatPath: true, v7_startTransition: true } };
+
 const ProtectedRoute = ({ children, requireRole }: { children: JSX.Element, requireRole?: boolean }) => {
   const { loading: authLoading } = useAuth();
   
@@ -53,71 +59,67 @@ const PermissionRoute = ({ children, permission }: { children: JSX.Element, perm
   return children;
 };
 
-const LAST_ROUTE_KEY = "tms_last_route";
-
-// Persists the current route and restores the last visited page after a reload.
-const RoutePersistence = ({ user }: { user: unknown }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const restored = useRef(false);
-
-  useEffect(() => {
-    if (!user || restored.current) return;
-    restored.current = true;
-    const saved = localStorage.getItem(LAST_ROUTE_KEY);
-    if (saved && saved !== location.pathname + location.search && location.pathname === "/") {
-      navigate(saved, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-    const path = location.pathname + location.search;
-    if (path.startsWith("/login") || path.startsWith("/survey")) return;
-    localStorage.setItem(LAST_ROUTE_KEY, path);
-  }, [user, location]);
-
-  return null;
-};
-
 const AppRoutes = () => {
   const { user, loading } = useAuth();
   const { has } = useUserRole();
   const [serverOk, setServerOk] = useState<boolean | null>(null);
 
-  // FIX #1 + #5: Extracted to function so it can be called from the config-change listener.
-  // getRuntimeApiBaseUrl() returns the correct base URL for Electron, Capacitor, and web.
-  const checkServer = () => {
-    const base = getRuntimeApiBaseUrl();
-    fetch(`${base}/api/ping`)
-      .then(r => r.json())
-      .then(j => setServerOk(j.ok === true))
-      .catch(() => setServerOk(false));
-  };
+  // ✅ فحص الاتصال بالخادم
+  const checkServer = useCallback(async () => {
+    // أولاً: جرب عنوان API من الإعدادات
+    const apiBase = getRuntimeApiBaseUrl();
+    if (apiBase) {
+      try {
+        const res = await fetch(`${apiBase}/api/ping`, { signal: AbortSignal.timeout(3000) });
+        const j = await res.json();
+        setServerOk(j.ok === true);
+        return;
+      } catch {
+        setServerOk(false);
+        return;
+      }
+    }
+
+    // إذا لم يكن هناك عنوان — جرب الطلب النسبي (يعمل على المتصفح/Electron)
+    try {
+      const res = await fetch("/api/ping", { signal: AbortSignal.timeout(3000) });
+      const j = await res.json();
+      setServerOk(j.ok === true);
+    } catch {
+      // إذا كنا على Capacitor/هاتف ولا يوجد عنوان — فشل
+      if (isCapacitorNative() || isMobileDevice()) {
+        setServerOk(false);
+      } else {
+        // على المتصفح المستضاف — قد لا نحتاج خادم محلي
+        setServerOk(null); // null = لا فحص (وضع سحابي)
+      }
+    }
+  }, []);
 
   useEffect(() => {
     checkServer();
     startScheduler();
-  }, []);
+  }, [checkServer]);
 
-  // FIX #5: Re-ping when appConfig changes (ConnectScreen calls setConfig → dispatches
-  // tms_config_changed → this fires → checkServer uses new host → serverOk becomes true
-  // → ConnectScreen unmounts automatically, no window.location.href needed).
+  // الاستماع لتغييرات الإعدادات (بعد ConnectScreen)
   useEffect(() => {
-    const handler = () => checkServer();
-    window.addEventListener("tms_config_changed", handler);
-    return () => window.removeEventListener("tms_config_changed", handler);
-  }, []);
+    const handleConfigChange = () => {
+      checkServer();
+    };
+    window.addEventListener("tms-config-changed", handleConfigChange);
+    return () => window.removeEventListener("tms-config-changed", handleConfigChange);
+  }, [checkServer]);
 
   if (loading) return <div className="h-screen w-full flex items-center justify-center"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>;
 
-  if (serverOk === false && !window.location.pathname.startsWith("/survey")) {
+  // ✅ إظهار ConnectScreen على الهاتف إذا الخادم غير متاح
+  if (serverOk === false && !window.location.pathname.startsWith("/survey") && !window.location.hash.startsWith("#/survey")) {
     const host = window.location.hostname;
     const isHostedApp = /lovable\.(app|dev)$|lovableproject\.com$|vercel\.app$|netlify\.app$/i.test(host);
-    // FIX #5: isNativePlatform() is the authoritative Capacitor check (not just UA sniff)
-    const isMobile = isNativePlatform() || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (isMobile && !isHostedApp) return <ConnectScreen />;
+    const isMobile = isCapacitorNative() || isMobileDevice();
+    if (isMobile && !isHostedApp) {
+      return <ConnectScreen onConnect={() => checkServer()} />;
+    }
   }
 
   if (!user) {
@@ -131,8 +133,6 @@ const AppRoutes = () => {
   }
 
   return (
-    <>
-    <RoutePersistence user={user} />
     <Routes>
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
@@ -151,14 +151,8 @@ const AppRoutes = () => {
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="*" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />
     </Routes>
-    </>
   );
 };
-
-// FIX #5: Use HashRouter on Capacitor native to prevent route breakage on refresh.
-// BrowserRouter breaks on Capacitor because the webview uses a custom scheme (capacitor://)
-// with no real server to resolve deep links — HashRouter avoids this entirely.
-const Router = (isElectronRuntime() || isNativePlatform()) ? HashRouter : BrowserRouter;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -167,7 +161,7 @@ const App = () => (
       <Sonner />
       <AuthProvider>
         <UIThemeProvider>
-          <Router>
+          <Router {...routerProps}>
             <AppRoutes />
             <ErrorMonitor />
           </Router>
