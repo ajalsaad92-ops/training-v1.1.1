@@ -13,9 +13,10 @@ extraResources:
     to: dist
     filter:
       - "**/*"
-# asar disabled so the bundled Express server can read dist/ files reliably
-# (serving static files from inside an asar archive is unreliable in production).
-asar: false
+# Keep the app archived to reduce Windows portable startup time. The desktop UI
+# now loads directly from dist/index.html; the localhost server is only the API
+# and LAN fallback, so it no longer needs loose frontend files to boot.
+asar: true
 win:
   target: portable
   signAndEditExecutable: false

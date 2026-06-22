@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { UIThemeProvider } from "@/contexts/UIThemeContext";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -13,6 +13,7 @@ import ConnectScreen from "@/components/ConnectScreen";
 import { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { startScheduler } from "@/lib/scheduledReports";
 import { Loader2 } from "lucide-react";
+import { getRuntimeApiBaseUrl, isElectronRuntime } from "@/lib/runtime";
 
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const HRAttendance = lazy(() => import("@/pages/HRAttendance"));
@@ -87,7 +88,7 @@ const AppRoutes = () => {
   const [serverOk, setServerOk] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch("/api/ping").then(r => r.json()).then(j => setServerOk(j.ok === true)).catch(() => setServerOk(false));
+    fetch(`${getRuntimeApiBaseUrl()}/api/ping`).then(r => r.json()).then(j => setServerOk(j.ok === true)).catch(() => setServerOk(false));
     startScheduler();
   }, []);
 
@@ -136,6 +137,8 @@ const AppRoutes = () => {
   );
 };
 
+const Router = isElectronRuntime() ? HashRouter : BrowserRouter;
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -143,10 +146,10 @@ const App = () => (
       <Sonner />
       <AuthProvider>
         <UIThemeProvider>
-          <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+          <Router future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
             <AppRoutes />
             <ErrorMonitor />
-          </BrowserRouter>
+          </Router>
         </UIThemeProvider>
       </AuthProvider>
     </TooltipProvider>

@@ -15,6 +15,7 @@
 
 import { getConfig, isLocalServerHost } from "@/lib/appConfig";
 import { getDeviceIdentity } from "@/lib/deviceIdentity";
+import { getRuntimeApiBaseUrl, isElectronRuntime } from "@/lib/runtime";
 
 const STORAGE_KEY = "tms_local_store";
 const PUSH_DEBOUNCE = 800;
@@ -40,6 +41,8 @@ export interface ConnectedDevice {
 
 /** Build the base URL used to reach the local server from THIS device. */
 export function getLocalServerBaseUrl(): string {
+  if (isElectronRuntime()) return getRuntimeApiBaseUrl();
+
   // When this device IS the host, the server is reachable on the same origin / localhost.
   if (isLocalServerHost()) {
     if (typeof window !== "undefined" && window.location?.origin && !window.location.origin.startsWith("http://localhost:8080")) {
