@@ -124,3 +124,10 @@ export function setStandaloneMode(): void {
   state = { status: "standalone", lastSync: null, error: null };
   notify();
 }
+
+export async function persistChanged(): Promise<void> {
+  if (isLocalMode()) {
+    await forcePush();
+  }
+  // In cloud mode, persistence is handled automatically
+}
