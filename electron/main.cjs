@@ -189,13 +189,19 @@ async function createWindow() {
     webPreferences: { nodeIntegration: false, contextIsolation: true },
   });
 
-  if (serverStarted) {
+  // Load the desktop UI directly from the packaged Vite files. This avoids the
+  // repeated Windows issue where the BrowserWindow opens http://localhost before
+  // static files are reachable and ends on "Cannot GET /" or a white 404 page.
+  // The local Express server still runs for API/LAN sync endpoints only.
+  const indexFile = path.join(DIST_DIR, "index.html");
+  if (fs.existsSync(indexFile)) {
+    mainWindow.loadFile(indexFile, {
+      query: { electron: "1", tmsApiPort: String(activePort), server: serverStarted ? "1" : "0" },
+    });
+  } else if (serverStarted) {
     mainWindow.loadURL(`http://localhost:${activePort}`);
   } else {
-    // Fallback: load the built file directly so the user never gets a blank/Cannot GET screen.
-    const indexFile = path.join(DIST_DIR, "index.html");
-    if (fs.existsSync(indexFile)) mainWindow.loadFile(indexFile);
-    else dialog.showErrorBox("نظام التدريب", "تعذر تشغيل الخادم المحلي ولم يتم العثور على ملفات التطبيق.");
+    dialog.showErrorBox("نظام التدريب", "تعذر تشغيل الخادم المحلي ولم يتم العثور على ملفات التطبيق.");
   }
 
   mainWindow.webContents.on("did-fail-load", (_e, code, desc, url) => {
