@@ -15,14 +15,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import {
   Settings as SettingsIcon, Download, Upload, Shield, Database, FileSpreadsheet,
-  AlertTriangle, CheckCircle2, XCircle, Clock, Loader2, LogOut, Bug, Bell,
+  AlertTriangle, CheckCircle2, XCircle, Clock, Loader2, Bug, Bell,
   Users, UserPlus, RefreshCw, Lock, Search, ChevronDown, ChevronUp, DownloadCloud,
   Eye, EyeOff, RotateCcw, Copy, Pencil, Trash2, FileText, Wrench,
 } from "lucide-react";
 import NotificationsControl from "@/components/settings/NotificationsControl";
 import { downloadFullBackup, restoreFromBackup } from "@/lib/backup";
 import { manualPullFromCloud } from "@/lib/sync/syncManager";
-import { checkForUpdates, applyUpdates } from "@/lib/updates/updateManager";
+import { checkForUpdates } from "@/lib/updates/updateManager";
 
 type SettingsTab = "general" | "permissions" | "tools";
 
