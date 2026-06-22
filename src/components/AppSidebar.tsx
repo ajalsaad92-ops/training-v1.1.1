@@ -113,6 +113,14 @@ const AppSidebar = ({ onNavigate }: AppSidebarProps) => {
           <Settings className={`w-4 h-4 flex-shrink-0 ${location.pathname === "/settings" ? "text-primary animate-spin-once" : ""}`} />
           {!collapsed && <span className="animate-fade-in">الإعدادات</span>}
         </NavLink>
+        <button
+          onClick={() => { logout(); onNavigate?.(); }}
+          className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs w-full transition-all duration-200 text-destructive hover:bg-destructive/10"
+          title={collapsed ? "تسجيل الخروج" : undefined}
+        >
+          <LogOut className="w-4 h-4 flex-shrink-0" />
+          {!collapsed && <span className="animate-fade-in">تسجيل الخروج</span>}
+        </button>
         <button onClick={() => setCollapsed(!collapsed)} className="hidden md:flex items-center justify-center w-full py-1.5 hover:bg-sidebar-accent rounded-lg transition-colors duration-200">
           {collapsed ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
         </button>
