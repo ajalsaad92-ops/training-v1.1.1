@@ -27,7 +27,7 @@ const Login = () => {
   const [setupPort, setSetupPort] = useState(() => getConfig().localServer.port || 3000);
   const [setupPath, setSetupPath] = useState(() => getConfig().storagePath || "");
   const [startingServer, setStartingServer] = useState(false);
-  const pendingAuth = useState<null | (() => Promise<void>)>(null);
+  const pendingAuthRef = useRef<null | (() => Promise<void>)>(null);
 
   const { login, signup, user, loading } = useAuth();
   const navigate = useNavigate();
