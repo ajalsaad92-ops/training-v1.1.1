@@ -96,7 +96,7 @@ const Login = () => {
     }
     toast({ title: "تم تشغيل الخادم المحلي", description: "سيتم تسجيل الدخول الآن" });
     setServerSetupOpen(false);
-    const run = pendingAuth[0];
+    const run = pendingAuthRef.current;
     if (run) await run();
   };
 
