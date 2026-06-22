@@ -57,7 +57,7 @@ const Login = () => {
         // Desktop with no running server → open the server setup wizard.
         setConnectStage("");
         setSubmitting(false);
-        pendingAuth[1](() => doAuth(authFn));
+        pendingAuthRef.current = () => doAuth(authFn);
         setServerSetupOpen(true);
         return;
       }
