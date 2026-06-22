@@ -147,72 +147,8 @@ function useAuditLogLazy() {
   return { data, refetch: () => setData(localDb.auditLog.getAll().sort((a, b) => b.timestamp.localeCompare(a.timestamp))) };
 }
 
-// ===== GENERAL TAB =====
-const GeneralTab = ({ backupDone, onBackup, onReset }: { backupDone: boolean; onBackup: () => void; onReset: () => void }) => {
-  const { data: auditLog } = useAuditLogLazy();
-  const { has } = useUserRole();
 
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
-        {has("backup_data") && (
-          <div className="bg-card rounded-lg border border-border p-4">
-            <h3 className="font-bold text-sm text-foreground mb-2 flex items-center gap-2"><Database className="w-4 h-4 text-primary" />النسخ الاحتياطي</h3>
-            <p className="text-xs text-muted-foreground mb-3">تحميل نسخة احتياطية من جميع البيانات</p>
-            <Button onClick={onBackup} size="sm" className="gap-1.5"><Download className="w-3.5 h-3.5" />{backupDone ? "✓ تم" : "تحميل"}</Button>
-          </div>
-        )}
-        <div className="bg-card rounded-lg border border-border p-4">
-          <h3 className="font-bold text-sm text-foreground mb-2 flex items-center gap-2"><FileSpreadsheet className="w-4 h-4 text-accent" />استعادة نسخة احتياطية</h3>
-          <p className="text-xs text-muted-foreground mb-3">استعادة بيانات من ملف نسخة احتياطية سابق</p>
-          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20">
-            <Upload className="w-3.5 h-3.5" />استعادة
-            <input type="file" accept=".json" className="hidden" onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              const reader = new FileReader();
-              reader.onload = (ev) => {
-                try {
-                  const data = JSON.parse(ev.target?.result as string);
-                  if (!data.exportDate) throw new Error("ملف غير صالح");
-                  localStorage.setItem("tms_local_store", JSON.stringify(data));
-                  toast({ title: "تم", description: "تمت استعادة البيانات — سيتم إعادة تحميل الصفحة" });
-                  setTimeout(() => window.location.reload(), 1000);
-                } catch (err) {
-                  toast({ title: "خطأ", description: "ملف النسخة الاحتياطية غير صالح", variant: "destructive" });
-                }
-              };
-              reader.readAsText(file);
-              e.target.value = "";
-            }} />
-          </label>
-        </div>
-      </div>
 
-      {has("reset_data") && (
-        <div className="bg-card rounded-lg border border-border p-4">
-          <h3 className="font-bold text-sm text-foreground mb-2 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-warning" />إعادة تعيين البيانات</h3>
-          <p className="text-xs text-muted-foreground mb-3">حذف جميع البيانات والعودة للبيانات الافتراضية</p>
-          <Button variant="destructive" size="sm" onClick={onReset} className="gap-1.5"><AlertTriangle className="w-3.5 h-3.5" />إعادة تعيين</Button>
-        </div>
-      )}
-
-      <div className="bg-card rounded-lg border border-border overflow-hidden">
-        <div className="p-3 border-b border-border"><h3 className="font-bold text-sm text-foreground flex items-center gap-2"><Shield className="w-4 h-4 text-primary" />سجل المراجعة</h3></div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-right">
-            <thead className="bg-muted/50"><tr><th className="p-2">المستخدم</th><th className="p-2">الإجراء</th><th className="p-2">العنصر</th><th className="p-2">الوقت</th></tr></thead>
-            <tbody>
-              {auditLog.length > 0 ? auditLog.slice(0, 20).map(e => (
-                <tr key={e.id} className="border-t border-border/50"><td className="p-2 font-medium">{e.user_name}</td><td className="p-2"><span className="badge-info">{e.action}</span></td><td className="p-2 text-muted-foreground">{e.target}</td><td className="p-2 text-muted-foreground">{new Date(e.timestamp).toLocaleString("ar-SA")}</td></tr>
-              )) : <tr><td colSpan={4} className="text-center py-6 text-muted-foreground">لا توجد سجلات</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ===== USERS TAB =====
 const UsersTab = () => {
