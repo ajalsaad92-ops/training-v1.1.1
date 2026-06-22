@@ -43,14 +43,19 @@ export async function prepareLoginConnection(): Promise<LoginConnectionStatus> {
     return "cloud";
   }
 
-  // The central server machine = the desktop (Electron) app. Its server is already running.
+  // The central server machine = the desktop (Electron) app.
+  // Its API server is started inside the Electron MAIN process before the window
+  // loads, so it is authoritative and always considered running here. We never block
+  // desktop login on a ping (a transient ping failure must NOT show "start the
+  // desktop version" — this IS the desktop version).
   if (isElectronRuntime()) {
     if (cfg.mode !== "local" || cfg.serverRole !== "server") {
       setConfig({ mode: "local", serverRole: "server" });
       reinitSync();
     }
-    const ok = await pingLocalServer();
-    return ok ? "is-server" : "need-server";
+    // Best-effort warm-up ping (ignored on failure); login proceeds regardless.
+    pingLocalServer().catch(() => {});
+    return "is-server";
   }
 
   // Client devices (phone / other laptop): discover the central server on the LAN.
