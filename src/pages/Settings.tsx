@@ -20,7 +20,7 @@ import {
   Eye, EyeOff, RotateCcw, Copy, Pencil, Trash2,
 } from "lucide-react";
 
-type SettingsTab = "general" | "users" | "permissions" | "designs" | "tools";
+type SettingsTab = "general" | "system" | "users" | "permissions" | "designs" | "tools";
 
 const Settings = () => {
   const { user, logout } = useAuth();
@@ -33,6 +33,7 @@ const Settings = () => {
 
   const tabs: { id: SettingsTab; label: string; icon: React.ElementType; show: boolean }[] = [
     { id: "general", label: "عام", icon: Database, show: true },
+    { id: "system", label: "الوضع والمزامنة", icon: Server, show: true },
     { id: "users", label: "المستخدمين", icon: Users, show: canManageUsers },
     { id: "permissions", label: "الصلاحيات", icon: Shield, show: canManagePerms },
     { id: "designs", label: "التصاميم", icon: Palette, show: true },
