@@ -81,6 +81,9 @@ const Login = () => {
           <p className="text-primary-foreground/70 text-sm mt-2">مركز القيادة والتحكم</p>
         </div>
 
+        {/* Connection / server setup — sits ABOVE the login form */}
+        <ConnectionSetup />
+
         <div className="bg-card rounded-2xl shadow-2xl p-8 border border-border">
           <h2 className="text-xl font-bold text-foreground mb-6 text-center">
             {isSignup ? "إنشاء حساب جديد" : "تسجيل الدخول"}
