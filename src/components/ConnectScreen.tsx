@@ -6,6 +6,7 @@ const ConnectScreen = () => {
   const [ip, setIp] = useState("");
   const [error, setError] = useState("");
   const [testing, setTesting] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -13,12 +14,7 @@ const ConnectScreen = () => {
     if (saved) setIp(saved);
   }, []);
 
-  const handleConnect = async () => {
-    const trimmed = ip.trim();
-    if (!trimmed) {
-      setError("يرجى إدخال عنوان IP الخاص بالحاسوب");
-      return;
-    }
+  const connectTo = async (trimmed: string) => {
     setTesting(true);
     setError("");
     setSuccess(false);
@@ -37,6 +33,29 @@ const ConnectScreen = () => {
       setError("تعذر الاتصال بالخادم. تأكد من أن الحاسوب والهاتف على نفس شبكة WiFi وأن الخادم يعمل");
     }
     setTesting(false);
+  };
+
+  const handleConnect = async () => {
+    const trimmed = ip.trim();
+    if (!trimmed) {
+      setError("يرجى إدخال عنوان IP الخاص بالحاسوب");
+      return;
+    }
+    await connectTo(trimmed);
+  };
+
+  const handleAutoConnect = async () => {
+    setDiscovering(true);
+    setError("");
+    setSuccess(false);
+    const host = await discoverServer();
+    setDiscovering(false);
+    if (host) {
+      setIp(host);
+      await connectTo(host);
+    } else {
+      setError("لم يُعثر على خادم تلقائياً. أدخل عنوان IP يدوياً ثم اضغط اتصال");
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
