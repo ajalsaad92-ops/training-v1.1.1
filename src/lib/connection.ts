@@ -115,3 +115,73 @@ export function disconnect(): void {
   connState = { status: "disconnected", serverIp: null, lastChecked: new Date().toISOString() };
   notifyConnection();
 }
+
+/**
+ * Prepares the connection for login.
+ * - If connected or can auto-connect → "connected"
+ * - If Electron (desktop) but no server → "need-server"
+ * - If mobile but no server → "no-server"
+ */
+export async function prepareLoginConnection(): Promise<"connected" | "need-server" | "no-server"> {
+  const connected = await autoConnect();
+
+  if (connected) {
+    return "connected";
+  }
+
+  // If Electron runtime (desktop), user needs to start server
+  if (isElectronRuntime()) {
+    return "need-server";
+  }
+
+  // Mobile/Capacitor standalone mode
+  if (isCapacitorNative() || isMobileDevice()) {
+    enableStandaloneMode();
+    return "connected";
+  }
+
+  // No server found and not desktop
+  return "no-server";
+}
+
+/**
+ * Starts the central server on desktop (Electron).
+ * Invokes IPC to spawn the server process with given options.
+ */
+export async function startCentralServer(options: {
+  port: number;
+  storagePath: string;
+}): Promise<boolean> {
+  if (!isElectronRuntime()) {
+    console.warn("startCentralServer: not running on Electron");
+    return false;
+  }
+
+  try {
+    // Dynamically require electron to avoid issues in non-Electron environments
+    const { ipcRenderer } = await import("electron");
+    const success = await ipcRenderer.invoke("start-central-server", options);
+
+    if (success) {
+      connState = {
+        status: "connected",
+        serverIp: "localhost",
+        lastChecked: new Date().toISOString(),
+      };
+      notifyConnection();
+      setConfig({
+        mode: "local",
+        localServer: {
+          host: "localhost",
+          port: options.port,
+          autoSync: true,
+        },
+      });
+    }
+
+    return success;
+  } catch (error) {
+    console.error("Failed to start central server:", error);
+    return false;
+  }
+}
