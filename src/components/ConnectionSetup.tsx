@@ -160,7 +160,7 @@ const ServerAddresses = ({ port }: { port: number }) => {
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
 
-  const activePort = info?.port || port || 3000;
+  const activePort = info?.port || port || 3003;
   const addresses = (info?.ips || []).map((ip) => `${ip.address}:${activePort}`);
 
   const copy = async (t: string) => {
