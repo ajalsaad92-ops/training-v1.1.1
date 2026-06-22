@@ -17,10 +17,11 @@ import {
   Settings as SettingsIcon, Download, Upload, Shield, Database, FileSpreadsheet,
   AlertTriangle, CheckCircle2, XCircle, Clock, Loader2, LogOut, Bug, Share2,
   Palette, Users, UserPlus, RefreshCw, Lock, Search, ChevronDown, ChevronUp,
-  Eye, EyeOff, RotateCcw, Copy, Pencil, Trash2,
+  Eye, EyeOff, RotateCcw, Copy, Pencil, Trash2, Server,
 } from "lucide-react";
+import SystemModeTab from "@/components/settings/SystemModeTab";
 
-type SettingsTab = "general" | "users" | "permissions" | "designs" | "tools";
+type SettingsTab = "general" | "system" | "users" | "permissions" | "designs" | "tools";
 
 const Settings = () => {
   const { user, logout } = useAuth();
@@ -33,6 +34,7 @@ const Settings = () => {
 
   const tabs: { id: SettingsTab; label: string; icon: React.ElementType; show: boolean }[] = [
     { id: "general", label: "عام", icon: Database, show: true },
+    { id: "system", label: "الوضع والمزامنة", icon: Server, show: true },
     { id: "users", label: "المستخدمين", icon: Users, show: canManageUsers },
     { id: "permissions", label: "الصلاحيات", icon: Shield, show: canManagePerms },
     { id: "designs", label: "التصاميم", icon: Palette, show: true },
@@ -113,6 +115,7 @@ const Settings = () => {
         {activeTab === "general" && (
           <GeneralTab backupDone={backupDone} onBackup={handleBackup} onReset={handleResetData} />
         )}
+        {activeTab === "system" && <SystemModeTab />}
         {activeTab === "users" && <UsersTab />}
         {activeTab === "permissions" && <PermissionsTab />}
         {activeTab === "designs" && <DesignsTab />}
