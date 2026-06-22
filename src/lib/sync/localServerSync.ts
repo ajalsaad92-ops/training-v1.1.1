@@ -84,6 +84,28 @@ export async function pullFromLocalServer(): Promise<Record<string, unknown> | n
 }
 
 /* ──────────────────────────────────────────────
+   Get server network information
+   ────────────────────────────────────────────── */
+export interface ServerNetworkInfo {
+  ips: Array<{ address: string }>;
+  port?: number;
+}
+
+export async function getServerNetworkInfo(): Promise<ServerNetworkInfo> {
+  try {
+    const baseUrl = getLocalServerBaseUrl();
+    if (!baseUrl) return { ips: [] };
+    const res = await fetch(`${baseUrl}/api/network-info`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    const data = await res.json();
+    return data || { ips: [] };
+  } catch {
+    return { ips: [] };
+  }
+}
+
+/* ──────────────────────────────────────────────
    Auto-discover server on LAN
    ────────────────────────────────────────────── */
 function buildCandidateList(): string[] {
