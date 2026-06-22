@@ -39,7 +39,7 @@ const personaLabels: Record<string, string> = {
 const AppSidebar = ({ onNavigate }: AppSidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [dark, setDark] = useState(() => localStorage.getItem("tms_theme") === "dark");
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { persona, has } = useUserRole();
   const location = useLocation();
 
