@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "released": "2026-06-22",
+  "categories": {
+    "data": { "version": "1.0.0", "label": "البيانات" },
+    "schema": { "version": "1.0.0", "label": "هيكل قاعدة البيانات" },
+    "ui": { "version": "1.0.0", "label": "الواجهة والتصميم" },
+    "pages": { "version": "1.0.0", "label": "الصفحات والمكوّنات" },
+    "logic": { "version": "1.0.0", "label": "منطق التطبيق والأكواد" },
+    "full": { "version": "1.0.0", "label": "تحديث كامل للتطبيق" }
+  }
+}
