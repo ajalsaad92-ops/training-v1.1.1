@@ -1,14 +1,15 @@
 // CommonJS main process. Must be .cjs because package.json sets "type":"module",
 // which would otherwise treat .js as ESM (where __dirname is undefined and importing
 // CommonJS deps such as express from inside an asar archive is unreliable).
-const { app, BrowserWindow, dialog } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 const path = require("path");
 const os = require("os");
 const fs = require("fs");
 const http = require("http");
-
-const DEFAULT_PORT = 3003;
-
+// ✅ FIX: Single source of truth for the port. Previously 3003 here vs 3000 in
+// the React side (src/lib/runtime.ts), which made every desktop startup fail
+// the /api/ping check and incorrectly show the "ConnectScreen".
+const DEFAULT_PORT = 3000;
 function resolveDistDir() {
   const packagedCandidates = [
     // Real folder copied by extraResources; Express can serve it reliably.
@@ -25,9 +26,9 @@ function resolveDistDir() {
   const candidates = app.isPackaged ? packagedCandidates : devCandidates;
   return candidates.find((dir) => fs.existsSync(path.join(dir, "index.html"))) || candidates[0];
 }
-
 const DIST_DIR = resolveDistDir();
-
+let activePort = DEFAULT_PORT;
+let httpServer = null;
 function log(...args) {
   try {
     const line = `[${new Date().toISOString()}] ` + args.map(String).join(" ") + "\n";
@@ -36,7 +37,6 @@ function log(...args) {
   // eslint-disable-next-line no-console
   console.log(...args);
 }
-
 function getLanIPs() {
   const nets = os.networkInterfaces();
   const results = [];
@@ -49,21 +49,17 @@ function getLanIPs() {
   }
   return results;
 }
-
 function buildApp() {
   const express = require("express");
   const cors = require("cors");
-
   // Storage location is configurable via TMS_DATA_DIR (set by the desktop app / Settings).
   const DATA_DIR = process.env.TMS_DATA_DIR || path.join(app.getPath("userData"), "data");
   try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch {}
   const DATA_FILE = path.join(DATA_DIR, "data.json");
   const DEVICES_FILE = path.join(DATA_DIR, "devices.json");
-
   const server = express();
   server.use(cors());
   server.use(express.json({ limit: "10mb" }));
-
   function readData() {
     try { if (fs.existsSync(DATA_FILE)) return JSON.parse(fs.readFileSync(DATA_FILE, "utf-8")); } catch {}
     return null;
@@ -79,7 +75,11 @@ function buildApp() {
     const fwd = req.headers["x-forwarded-for"];
     return (fwd ? String(fwd).split(",")[0] : req.socket?.remoteAddress || "").replace("::ffff:", "");
   }
-
+  // ---- Health & diagnostics ----
+  server.get("/api/ping", (_req, res) => res.json({ ok: true, ts: Date.now(), port: activePort }));
+  server.get("/api/ip", (_req, res) => res.json({ ok: true, ips: getLanIPs(), port: activePort }));
+  server.get("/api/discover", (_req, res) =>
+    res.json({ ok: true, role: "server", name: "نظام التدريب — الخادم المحلي", port: activePort, ts: Date.now() }));
   // ---- Data store ----
   server.get("/api/store", (_req, res) => {
     const data = readData();
@@ -89,16 +89,11 @@ function buildApp() {
     const { data } = req.body || {};
     if (!data) return res.status(400).json({ ok: false });
     data.__ts = Date.now();
-    try { fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf-8"); } catch (e) { return res.status(500).json({ ok: false, error: String(e) }); }
+    try { fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf-8"); } catch (e) {
+      return res.status(500).json({ ok: false, error: String(e) });
+    }
     res.json({ ok: true, ts: data.__ts });
   });
-
-  // ---- Diagnostics / discovery ----
-  server.get("/api/ping", (_req, res) => res.json({ ok: true, ts: Date.now() }));
-  server.get("/api/ip", (_req, res) => res.json({ ok: true, ips: getLanIPs(), port: activePort }));
-  server.get("/api/discover", (_req, res) =>
-    res.json({ ok: true, role: "server", name: "نظام التدريب — الخادم المحلي", port: activePort, ts: Date.now() }));
-
   // ---- Devices registry ----
   server.post("/api/heartbeat", (req, res) => {
     const { id, name, type, platform } = req.body || {};
@@ -133,7 +128,6 @@ function buildApp() {
     writeDevices(devices);
     res.json({ ok: true });
   });
-
   // ---- Static SPA for LAN clients. The desktop window loads the same files directly. ----
   const indexFile = path.join(DIST_DIR, "index.html");
   server.use(express.static(DIST_DIR));
@@ -142,42 +136,51 @@ function buildApp() {
     if (fs.existsSync(indexFile)) return res.sendFile(indexFile);
     res.status(500).send("Build not found. dist/index.html is missing inside the package.");
   });
-
   return server;
 }
-
-let activePort = DEFAULT_PORT;
-
-// Try the default port, then a few fallbacks if it is already in use.
-function listenWithFallback(handler, port, attemptsLeft) {
+/**
+ * ✅ FIX: Robust port fallback.
+ * - Tries DEFAULT_PORT first.
+ * - On EADDRINUSE, walks up to `maxAttempts` higher ports.
+ * - If EVERY attempt fails, the OUTER promise rejects so callers can react.
+ *   The previous implementation nested resolve() around a rejecting inner
+ *   promise, which silently swallowed the final EADDRINUSE error.
+ */
+function listenWithFallback(handler, startPort, maxAttempts) {
   return new Promise((resolve, reject) => {
-    const srv = http.createServer(handler);
-    srv.on("error", (err) => {
-      if (err.code === "EADDRINUSE" && attemptsLeft > 0) {
-        log("Port", port, "in use, trying", port + 1);
-        resolve(listenWithFallback(handler, port + 1, attemptsLeft - 1));
-      } else {
-        reject(err);
-      }
-    });
-    srv.listen(port, "0.0.0.0", () => {
-      activePort = port;
-      resolve(srv);
-    });
+    const tryPort = (port, left) => {
+      const srv = http.createServer(handler);
+      const onError = (err) => {
+        srv.removeListener("listening", onListening);
+        if (err.code === "EADDRINUSE" && left > 0) {
+          log("Port", port, "in use, trying", port + 1);
+          tryPort(port + 1, left - 1);
+        } else {
+          reject(err);
+        }
+      };
+      const onListening = () => {
+        srv.removeListener("error", onError);
+        activePort = port;
+        httpServer = srv;
+        log("Local server listening on port", activePort);
+        resolve(srv);
+      };
+      srv.once("error", onError);
+      srv.once("listening", onListening);
+      srv.listen(port, "0.0.0.0");
+    };
+    tryPort(startPort, maxAttempts);
   });
 }
-
 async function startServer() {
   if (!fs.existsSync(path.join(DIST_DIR, "index.html"))) {
     log("WARNING: dist/index.html not found at", DIST_DIR);
   }
   const handler = buildApp();
   await listenWithFallback(handler, DEFAULT_PORT, 10);
-  log("Local server listening on port", activePort);
 }
-
 let mainWindow = null;
-
 async function createWindow() {
   let serverStarted = true;
   try {
@@ -186,16 +189,25 @@ async function createWindow() {
     serverStarted = false;
     log("Server failed to start:", e && e.stack ? e.stack : String(e));
   }
-
   const ips = getLanIPs();
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     title: `نظام التدريب — ${ips[0]?.address || "localhost"}:${activePort}`,
     show: false,
-    webPreferences: { nodeIntegration: false, contextIsolation: true },
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      // ✅ FIX: Expose the actual running port and server status to the renderer
+      // so the React side can build absolute API URLs (file:// cannot do relative fetches).
+      preload: path.join(__dirname, "preload.cjs"),
+      additionalArguments: [
+        `--tms-api-port=${activePort}`,
+        `--tms-server=${serverStarted ? "1" : "0"}`,
+        `--tms-host=${ips[0]?.address || ""}`,
+      ],
+    },
   });
-
   // Load the desktop UI directly from the packaged Vite files. This avoids the
   // repeated Windows issue where the BrowserWindow opens http://localhost before
   // static files are reachable and ends on "Cannot GET /" or a white 404 page.
@@ -215,17 +227,30 @@ async function createWindow() {
   } else {
     dialog.showErrorBox("نظام التدريب", "تعذر تشغيل الخادم المحلي ولم يتم العثور على ملفات التطبيق.");
   }
-
   mainWindow.webContents.on("did-fail-load", (_e, code, desc, url) => {
     log("did-fail-load", code, desc, url);
   });
-
   mainWindow.once("ready-to-show", () => mainWindow.show());
-  mainWindow.on("closed", () => { mainWindow = null; });
+  // ✅ IPC: let the renderer query server info at runtime (used by runtime.ts).
+  ipcMain.handle("tms:get-server-info", () => ({
+    ok: true,
+    port: activePort,
+    ips: getLanIPs(),
+    serverStarted,
+  }));
 }
-
-app.whenReady().then(createWindow).catch((e) => {
-  log("whenReady error:", e && e.stack ? e.stack : String(e));
+app.whenReady().then(() => {
+  createWindow();
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
 });
-app.on("window-all-closed", () => app.quit());
-app.on("activate", () => { if (!mainWindow) createWindow(); });
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
+});
+app.on("before-quit", () => {
+  if (httpServer) {
+    try { httpServer.close(); } catch {}
+    httpServer = null;
+  }
+});
