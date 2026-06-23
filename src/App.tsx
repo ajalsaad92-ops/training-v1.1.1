@@ -1,64 +1,159 @@
-import { useEffect, useState } from "react";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { UIThemeProvider } from "@/contexts/UIThemeContext";
+import { useUserRole } from "@/hooks/useUserRole";
+import Layout from "@/components/Layout";
+import ErrorMonitor from "@/components/ErrorMonitor";
+import Login from "@/pages/Login";
+import ConnectScreen from "@/components/ConnectScreen";
+import { lazy, Suspense, useState, useEffect, useRef } from "react";
+import { startScheduler } from "@/lib/scheduledReports";
+import { Loader2 } from "lucide-react";
+import { getRuntimeApiBaseUrl, isElectronRuntime } from "@/lib/runtime";
 
-type ServerStatus = "starting" | "running" | "error";
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const HRAttendance = lazy(() => import("@/pages/HRAttendance"));
 
-export default function App() {
-  const [status, setStatus] = useState<ServerStatus>("starting");
-  const [time, setTime] = useState<string>(new Date().toLocaleTimeString());
+const Courses = lazy(() => import("@/pages/Courses"));
+const Curriculum = lazy(() => import("@/pages/Curriculum"));
+const Evaluation = lazy(() => import("@/pages/Evaluation"));
+const Reports = lazy(() => import("@/pages/Reports"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const Tasks = lazy(() => import("@/pages/Tasks"));
+const TrainingPlan = lazy(() => import("@/pages/TrainingPlan"));
+const ActivityLog = lazy(() => import("@/pages/ActivityLog"));
+const Archive = lazy(() => import("@/pages/Archive"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
+const ExternalSurvey = lazy(() => import("@/pages/ExternalSurvey"));
+
+const PageLoader = () => (
+  <div className="h-64 w-full flex items-center justify-center">
+    <Loader2 className="animate-spin text-primary w-6 h-6" />
+  </div>
+);
+
+const queryClient = new QueryClient();
+
+const ProtectedRoute = ({ children, requireRole }: { children: JSX.Element, requireRole?: boolean }) => {
+  const { loading: authLoading } = useAuth();
+  
+  if (authLoading) return <div className="h-screen w-full flex items-center justify-center"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>;
+  if (requireRole === false) return <Navigate to="/" replace />;
+
+  return children;
+};
+
+const PermissionRoute = ({ children, permission }: { children: JSX.Element, permission: boolean }) => {
+  if (permission === false) return <Navigate to="/" replace />;
+  return children;
+};
+
+const LAST_ROUTE_KEY = "tms_last_route";
+
+// Persists the current route and restores the last visited page after a reload.
+const RoutePersistence = ({ user }: { user: unknown }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const restored = useRef(false);
+
+  // Restore the saved route once, right after the user is authenticated.
+  useEffect(() => {
+    if (!user || restored.current) return;
+    restored.current = true;
+    const saved = localStorage.getItem(LAST_ROUTE_KEY);
+    if (saved && saved !== location.pathname + location.search && location.pathname === "/") {
+      navigate(saved, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Save the current route whenever it changes (skip auth/survey routes).
+  useEffect(() => {
+    if (!user) return;
+    const path = location.pathname + location.search;
+    if (path.startsWith("/login") || path.startsWith("/survey")) return;
+    localStorage.setItem(LAST_ROUTE_KEY, path);
+  }, [user, location]);
+
+  return null;
+};
+
+const AppRoutes = () => {
+  const { user, loading } = useAuth();
+  const { has } = useUserRole();
+  const [serverOk, setServerOk] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Simulate server boot
-    const t = setTimeout(() => setStatus("running"), 800);
-    const clock = setInterval(
-      () => setTime(new Date().toLocaleTimeString()),
-      1000
-    );
-    return () => {
-      clearTimeout(t);
-      clearInterval(clock);
-    };
+    fetch(`${getRuntimeApiBaseUrl()}/api/ping`).then(r => r.json()).then(j => setServerOk(j.ok === true)).catch(() => setServerOk(false));
+    startScheduler();
   }, []);
 
-  const dot =
-    status === "running"
-      ? "bg-emerald-500"
-      : status === "starting"
-      ? "bg-amber-500 animate-pulse"
-      : "bg-rose-500";
+  if (loading) return <div className="h-screen w-full flex items-center justify-center"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>;
+
+  if (serverOk === false && !window.location.pathname.startsWith("/survey")) {
+    const host = window.location.hostname;
+    const isHostedApp = /lovable\.(app|dev)$|lovableproject\.com$|vercel\.app$|netlify\.app$/i.test(host);
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobile && !isHostedApp) return <ConnectScreen />;
+  }
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/survey/:courseId/:role" element={<Suspense fallback={<PageLoader />}><ExternalSurvey /></Suspense>} />
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-indigo-50 p-8">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl shadow-indigo-100 ring-1 ring-slate-200">
-        <div className="mb-6 flex items-center gap-3">
-          <span className={`h-3 w-3 rounded-full ${dot}`} />
-          <h1 className="text-xl font-semibold text-slate-900">
-            Training v1.1.1 — Server Status
-          </h1>
-        </div>
+    <>
+    <RoutePersistence user={user} />
+    <Routes>
+      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route index element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
+        <Route path="settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
+        <Route path="curriculum" element={<PermissionRoute permission={has("view_curriculum")}><Suspense fallback={<PageLoader />}><Curriculum /></Suspense></PermissionRoute>} />
+        <Route path="activity-log" element={<PermissionRoute permission={has("view_activity_log")}><Suspense fallback={<PageLoader />}><ActivityLog /></Suspense></PermissionRoute>} />
+        <Route path="tasks" element={<PermissionRoute permission={has("view_tasks")}><Suspense fallback={<PageLoader />}><Tasks /></Suspense></PermissionRoute>} />
+        <Route path="hr" element={<PermissionRoute permission={has("view_hr")}><Suspense fallback={<PageLoader />}><HRAttendance /></Suspense></PermissionRoute>} />
 
-        <div className="space-y-2 text-sm">
-          <Row label="Status" value={status.toUpperCase()} />
-          <Row label="Server Time" value={time} />
-          <Row label="Port" value="5173" />
-          <Row label="Host" value="0.0.0.0" />
-        </div>
-
-        <button
-          onClick={() => setStatus((s) => (s === "running" ? "starting" : "running"))}
-          className="mt-6 w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 active:scale-[0.99] transition"
-        >
-          Toggle Status
-        </button>
-      </div>
-    </div>
+        <Route path="courses" element={<PermissionRoute permission={has("view_courses")}><Suspense fallback={<PageLoader />}><Courses /></Suspense></PermissionRoute>} />
+        <Route path="training-plan" element={<PermissionRoute permission={has("view_training_plan")}><Suspense fallback={<PageLoader />}><TrainingPlan /></Suspense></PermissionRoute>} />
+        <Route path="archive" element={<PermissionRoute permission={has("view_archive")}><Suspense fallback={<PageLoader />}><Archive /></Suspense></PermissionRoute>} />
+        <Route path="evaluation" element={<PermissionRoute permission={has("view_evaluation")}><Suspense fallback={<PageLoader />}><Evaluation /></Suspense></PermissionRoute>} />
+        <Route path="reports" element={<PermissionRoute permission={has("view_reports")}><Suspense fallback={<PageLoader />}><Reports /></Suspense></PermissionRoute>} />
+      </Route>
+      <Route path="/survey/:courseId/:role" element={<Suspense fallback={<PageLoader />}><ExternalSurvey /></Suspense>} />
+      <Route path="/login" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />
+    </Routes>
+    </>
   );
-}
+};
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between rounded-md bg-slate-50 px-3 py-2">
-      <span className="text-slate-500">{label}</span>
-      <span className="font-mono text-slate-900">{value}</span>
-    </div>
-  );
-}
+const Router = isElectronRuntime() ? HashRouter : BrowserRouter;
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <AuthProvider>
+        <UIThemeProvider>
+          <Router future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+            <AppRoutes />
+            <ErrorMonitor />
+          </Router>
+        </UIThemeProvider>
+      </AuthProvider>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
+
+export default App;

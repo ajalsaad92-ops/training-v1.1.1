@@ -18,7 +18,7 @@
  *     replaced by a real install, never silently). This keeps the local version reproducible.
  */
 
-import { forcePull } from "@/lib/sync/syncManager";
+import { manualPullFromCloud } from "@/lib/sync/syncManager";
 
 export type UpdateCategoryId = "data" | "schema" | "ui" | "pages" | "logic" | "full";
 
@@ -125,8 +125,8 @@ export async function applyUpdates(selected: UpdateCategoryId[], cloudManifestUr
 
   const wantsData = selected.includes("data") || selected.includes("schema") || selected.includes("full");
   if (wantsData) {
-    const data = await forcePull();
-    if (data) {
+    const res = await manualPullFromCloud();
+    if (res.ok) {
       if (selected.includes("data")) applied.push("data");
       if (selected.includes("schema")) applied.push("schema");
     }

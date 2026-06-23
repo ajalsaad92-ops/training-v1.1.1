@@ -11,7 +11,7 @@ import {
   Network, Copy, Check, Lock, Radio, Smartphone, PlugZap,
 } from "lucide-react";
 import { getConfig, setConfig, type AppMode, type ServerRole } from "@/lib/appConfig";
-import { reinitSyncManager } from "@/lib/sync/syncManager";
+import { reinitSync } from "@/lib/sync/syncManager";
 import {
   pingLocalServer, discoverServer, getServerNetworkInfo, type ServerNetworkInfo,
 } from "@/lib/sync/localServerSync";
@@ -51,7 +51,7 @@ const ConnectionSetup = () => {
       ) : (
         <button
           onClick={() => setOpen(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/25 text-primary-foreground font-medium"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/25 text-primary-foreground font-medium text-sm hover:bg-primary-foreground/20 transition"
         >
           <Server className="w-4 h-4" />
           فتح الخادم المحلي
@@ -97,7 +97,7 @@ const ClientConnectCard = ({
       apply({ localServer: { ...cfg.localServer, host } });
       const ok = await pingLocalServer();
       setStatus(ok ? "online" : "offline");
-      if (ok) { reinitSyncManager(); toast({ title: "تم الاتصال بالخادم تلقائياً", description: host }); }
+      if (ok) { reinitSync(); toast({ title: "تم الاتصال بالخادم تلقائياً", description: host }); }
     } else {
       setStatus("offline");
       toast({ title: "لم يُعثر على خادم محلي", description: "استخدم الاتصال اليدوي وأدخل عنوان IP", variant: "destructive" });
@@ -111,7 +111,7 @@ const ClientConnectCard = ({
     setStatus("unknown");
     const ok = await pingLocalServer();
     setStatus(ok ? "online" : "offline");
-    if (ok) { reinitSyncManager(); toast({ title: "تم الاتصال بالخادم" }); }
+    if (ok) { reinitSync(); toast({ title: "تم الاتصال بالخادم" }); }
     else toast({ title: "تعذّر الاتصال", description: "تحقق من عنوان IP والشبكة", variant: "destructive" });
     setBusy(null);
   };
@@ -217,7 +217,7 @@ const SetupDialog = ({
       serverRole: "server",
       localServer: { host: "127.0.0.1", port: 3003 },
     });
-    reinitSyncManager();
+    reinitSync();
     toast({ title: "تم بدء الخادم المحلي", description: "127.0.0.1:3003" });
     onOpenChange(false);
   };
@@ -229,7 +229,7 @@ const SetupDialog = ({
       const host = await discoverServer();
       if (host) apply({ localServer: { ...cfg.localServer, host } });
     }
-    reinitSyncManager();
+    reinitSync();
     const ok = await pingLocalServer();
     setBusy(false);
     if (ok) { toast({ title: "تم الاتصال بالخادم المحلي" }); onOpenChange(false); }
@@ -239,7 +239,7 @@ const SetupDialog = ({
   const confirmCloud = () => {
     if (pwd !== CLOUD_PASSWORD) { setPwdErr("كلمة السر غير صحيحة"); return; }
     apply({ mode: "cloud" });
-    reinitSyncManager();
+    reinitSync();
     toast({ title: "تم التحويل إلى الوضع السحابي" });
     onOpenChange(false);
   };

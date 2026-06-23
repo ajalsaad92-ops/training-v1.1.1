@@ -1,166 +1,94 @@
-// syncManager.ts — Coordinates sync between cloud (Supabase) and local (Express) modes
+/**
+ * syncManager — SYNCHRONIZATION ORCHESTRATION layer.
+ *
+ * The one place that decides, based on the current MODE, how data is persisted and synced:
+ *
+ *  CLOUD MODE  -> behaves exactly like before: automatic, real-time cloud sync (supabaseSync).
+ *  LOCAL MODE  -> NO automatic cloud sync. Data is persisted to the central local server
+ *                 (localServerSync). Cloud -> Local sync is MANUAL only and never the reverse.
+ *
+ * Public surface:
+ *  - initSync()            : called once on boot (from main.tsx).
+ *  - persistChanged()      : called by the data layer whenever the store is saved.
+ *  - reinitSync()          : re-evaluate mode (after the user switches modes in Settings).
+ *  - manualPullFromCloud() : the ONLY allowed cloud interaction in local mode (Cloud -> Local).
+ */
 
-import { getConfig, isLocalMode } from "@/lib/appConfig";
-import {
-  startLocalSync,
-  stopLocalSync,
-  pushToLocalServer,
-  pullFromLocalServer,
-  pingLocalServer,
-} from "@/lib/sync/localServerSync";
-import { localDb } from "@/lib/localStore";
+import { getMode } from "@/lib/appConfig";
+import * as cloud from "@/lib/supabaseSync";
+import * as local from "@/lib/sync/localServerSync";
 
-export type SyncStatus = "idle" | "syncing" | "connected" | "disconnected" | "error" | "standalone";
+const STORAGE_KEY = "tms_local_store";
+let started = false;
 
-interface SyncManagerState {
-  status: SyncStatus;
-  lastSync: string | null;
-  error: string | null;
-}
-
-let state: SyncManagerState = {
-  status: "idle",
-  lastSync: null,
-  error: null,
-};
-
-let statusListeners: Array<(s: SyncManagerState) => void> = [];
-
-function notify() {
-  statusListeners.forEach((fn) => fn({ ...state }));
-}
-
-export function onSyncStatusChange(fn: (s: SyncManagerState) => void): () => void {
-  statusListeners.push(fn);
-  return () => {
-    statusListeners = statusListeners.filter((f) => f !== fn);
-  };
-}
-
-export function getSyncStatus(): SyncManagerState {
-  return { ...state };
-}
-
-export async function initSync(onDataReceived?: (data: Record<string, unknown>) => void): Promise<void> {
-  const config = getConfig();
-
-  if (config.mode === "local") {
-    const host = config.localServer?.host;
-    if (!host || host === "" ||
-        ((host === "127.0.0.1" || host === "localhost") &&
-         typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.())) {
-      state.status = "disconnected";
-      state.error = "No server address configured.";
-      notify();
-      return;
-    }
-
-    state.status = "syncing";
-    notify();
-
-    const alive = await pingLocalServer();
-    if (alive) {
-      state.status = "connected";
-      state.lastSync = new Date().toISOString();
-      notify();
-      startLocalSync((data) => {
-        state.lastSync = new Date().toISOString();
-        notify();
-        const local = localDb.getAll();
-        const merged = { ...local, ...data };
-        localDb.setAll(merged);
-        onDataReceived?.(merged);
-      });
-    } else {
-      state.status = "disconnected";
-      state.error = `Local server not reachable at ${host}`;
-      notify();
-    }
+/** Initialise sync for the active mode. Idempotent per mode. */
+export function initSync() {
+  const mode = getMode();
+  if (mode === "local") {
+    // Make sure cloud auto-sync is OFF, then start local-server sync.
+    try { cloud.stopSync(); } catch { /* noop */ }
+    local.startLocalSync();
   } else {
-    state.status = "connected";
-    notify();
+    // Cloud mode: original behaviour — real-time cloud sync.
+    try { local.stopLocalSync(); } catch { /* noop */ }
+    cloud.startSync();
+  }
+  started = true;
+}
+
+/** Re-evaluate the mode and restart the appropriate sync engine. */
+export function reinitSync() {
+  try { cloud.stopSync(); } catch { /* noop */ }
+  try { local.stopLocalSync(); } catch { /* noop */ }
+  started = false;
+  initSync();
+}
+
+/**
+ * Routed persistence hook. Called by the data layer after each save.
+ *  - Cloud mode: push to the cloud (only when the cloud is reachable).
+ *  - Local mode: push to the central local server. NEVER pushes to the cloud.
+ */
+export function persistChanged() {
+  if (!started) return;
+  if (getMode() === "local") {
+    local.debouncedLocalPush();
+  } else if (cloud.getServerAvailable()) {
+    cloud.debouncedPush();
   }
 }
 
-export async function reinitSyncManager(onDataReceived?: (data: Record<string, unknown>) => void): Promise<void> {
-  teardownSync();
-  await initSync(onDataReceived);
+export interface ManualSyncResult {
+  ok: boolean;
+  message: string;
 }
 
-export function teardownSync(): void {
-  stopLocalSync();
-  state = { status: "idle", lastSync: null, error: null };
-  notify();
-}
-
-export async function forcePush(): Promise<boolean> {
-  if (isLocalMode()) {
-    const data = localDb.getAll();
-    const success = await pushToLocalServer(data);
-    if (success) {
-      state.lastSync = new Date().toISOString();
-      notify();
-    }
-    return success;
-  }
-  return true;
-}
-
-export async function forcePull(): Promise<Record<string, unknown> | null> {
-  if (isLocalMode()) {
-    const data = await pullFromLocalServer();
-    if (data) {
-      state.lastSync = new Date().toISOString();
-      localDb.setAll(data);
-      notify();
-    }
-    return data;
-  }
-  return null;
-}
-
-export function setStandaloneMode(): void {
-  stopLocalSync();
-  state = { status: "standalone", lastSync: null, error: null };
-  notify();
-}
-
-export async function persistChanged(): Promise<void> {
-  if (isLocalMode()) {
-    await forcePush();
-  }
-  // In cloud mode, persistence is handled automatically
-}
-
-export async function manualPullFromCloud(): Promise<{ ok: boolean; message: string }> {
+/**
+ * MANUAL Cloud -> Local sync (the only permitted direction in local mode).
+ * Pulls the cloud snapshot, merges it into the local store, and persists it to the
+ * local server. Does NOT push anything back to the cloud.
+ */
+export async function manualPullFromCloud(): Promise<ManualSyncResult> {
   try {
-    state.status = "syncing";
-    notify();
-
-    const data = await forcePull();
-    
-    if (data) {
-      state.status = "connected";
-      state.lastSync = new Date().toISOString();
-      notify();
-      return {
-        ok: true,
-        message: "تم تحديث البيانات من السحابة بنجاح",
-      };
-    } else {
-      state.status = "disconnected";
-      return {
-        ok: false,
-        message: "فشل في سحب البيانات من السحابة",
-      };
+    const remote = await cloud.pullFromSupabase();
+    if (!remote) {
+      return { ok: false, message: "لا توجد بيانات جديدة في السحابة أو تعذّر الوصول إليها" };
     }
-  } catch (error) {
-    state.status = "error";
-    state.error = error instanceof Error ? error.message : "Unknown error";
-    notify();
-    return {
-      ok: false,
-      message: state.error,
-    };
+    const localRaw = localStorage.getItem(STORAGE_KEY);
+    const localData = localRaw ? JSON.parse(localRaw) : {};
+    const merged = { ...localData, ...remote };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+
+    // Reflect the pulled data in the UI immediately.
+    window.dispatchEvent(new CustomEvent("tms_remote_update"));
+    window.dispatchEvent(new CustomEvent("tms_store_changed"));
+
+    // Persist the pulled snapshot to the central local server (if we are in local mode).
+    if (getMode() === "local") {
+      await local.pushToLocalServer();
+    }
+    return { ok: true, message: "تم سحب البيانات من السحابة إلى النسخة المحلية بنجاح" };
+  } catch {
+    return { ok: false, message: "فشلت عملية السحب من السحابة" };
   }
 }
