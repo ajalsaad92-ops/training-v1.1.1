@@ -1,9 +1,13 @@
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
 import "./index.css";
-import { initSync } from "@/lib/sync/syncManager";
+import App from "./App";
 
-// Boots the right sync engine for the active mode (cloud real-time vs. local server).
-initSync();
+const rootEl = document.getElementById("root");
+if (!rootEl) throw new Error("Root element #root not found in index.html");
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(rootEl).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
