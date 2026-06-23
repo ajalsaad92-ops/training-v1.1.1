@@ -13,12 +13,16 @@ import ConnectScreen from "@/components/ConnectScreen";
 import { lazy, Suspense, useState, useEffect, useCallback } from "react";
 import { startScheduler } from "@/lib/scheduledReports";
 import { Loader2 } from "lucide-react";
-import { isCapacitorNative, isMobileDevice, getRuntimeApiBaseUrl } from "@/lib/runtime";
+import {
+  isCapacitorNative,
+  isMobileDevice,
+  isElectronRuntime,
+  getRuntimeApiBaseUrl,
+  pingLocalServer,
+} from "@/lib/runtime";
 import { getConfig } from "@/lib/appConfig";
-
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const HRAttendance = lazy(() => import("@/pages/HRAttendance"));
-
 const Courses = lazy(() => import("@/pages/Courses"));
 const Curriculum = lazy(() => import("@/pages/Curriculum"));
 const Evaluation = lazy(() => import("@/pages/Evaluation"));
@@ -30,77 +34,57 @@ const ActivityLog = lazy(() => import("@/pages/ActivityLog"));
 const Archive = lazy(() => import("@/pages/Archive"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const ExternalSurvey = lazy(() => import("@/pages/ExternalSurvey"));
-
 const PageLoader = () => (
-  <div className="h-64 w-full flex items-center justify-center">
-    <Loader2 className="animate-spin text-primary w-6 h-6" />
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <Loader2 className="w-8 h-8 animate-spin text-primary" />
   </div>
 );
-
 const queryClient = new QueryClient();
-
 // ✅ اختيار الراوتر بناءً على المنصة
 const Router = (isCapacitorNative() || isMobileDevice()) ? HashRouter : BrowserRouter;
-const routerProps = (isCapacitorNative() || isMobileDevice()) 
-  ? {} 
+const routerProps = (isCapacitorNative() || isMobileDevice())
+  ? {}
   : { future: { v7_relativeSplatPath: true, v7_startTransition: true } };
-
 const ProtectedRoute = ({ children, requireRole }: { children: JSX.Element, requireRole?: boolean }) => {
   const { loading: authLoading } = useAuth();
-  
-  if (authLoading) return <div className="h-screen w-full flex items-center justify-center"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>;
-  if (requireRole === false) return <Navigate to="/" replace />;
-
+  if (authLoading) return <PageLoader />;
+  if (requireRole === false) return <Navigate to="/dashboard" replace />;
   return children;
 };
-
 const PermissionRoute = ({ children, permission }: { children: JSX.Element, permission: boolean }) => {
-  if (permission === false) return <Navigate to="/" replace />;
+  if (permission === false) return <Navigate to="/dashboard" replace />;
   return children;
 };
-
 const AppRoutes = () => {
   const { user, loading } = useAuth();
   const { has } = useUserRole();
   const [serverOk, setServerOk] = useState<boolean | null>(null);
-
-  // ✅ فحص الاتصال بالخادم
+  // ✅ فحص الاتصال بالخادم — يستخدم pingLocalServer (مطلق، يعمل على file:// أيضاً)
   const checkServer = useCallback(async () => {
-    // أولاً: جرب عنوان API من الإعدادات
+    // 1) إذا كنا على Electron والخادم معروف أنه يعمل — لا تفحص أبداً
+    if (isElectronRuntime() && (window as any).electronAPI?.serverRunning === true) {
+      setServerOk(true);
+      return;
+    }
+    // 2) جرّب العنوان من الإعدادات (أو localhost على Electron)
     const apiBase = getRuntimeApiBaseUrl();
     if (apiBase) {
-      try {
-        const res = await fetch(`${apiBase}/api/ping`, { signal: AbortSignal.timeout(3000) });
-        const j = await res.json();
-        setServerOk(j.ok === true);
-        return;
-      } catch {
-        setServerOk(false);
-        return;
-      }
+      const ok = await pingLocalServer(3000);
+      setServerOk(ok);
+      return;
     }
-
-    // إذا لم يكن هناك عنوان — جرب الطلب النسبي (يعمل على المتصفح/Electron)
-    try {
-      const res = await fetch("/api/ping", { signal: AbortSignal.timeout(3000) });
-      const j = await res.json();
-      setServerOk(j.ok === true);
-    } catch {
-      // إذا كنا على Capacitor/هاتف ولا يوجد عنوان — فشل
-      if (isCapacitorNative() || isMobileDevice()) {
-        setServerOk(false);
-      } else {
-        // على المتصفح المستضاف — قد لا نحتاج خادم محلي
-        setServerOk(null); // null = لا فحص (وضع سحابي)
-      }
+    // 3) لا يوجد عنوان — على المتصفح العادي (سحابي) لا حاجة لخادم محلي
+    if (!isCapacitorNative() && !isMobileDevice()) {
+      setServerOk(null);
+      return;
     }
+    // 4) على الهاتف بدون عنوان — فشل
+    setServerOk(false);
   }, []);
-
   useEffect(() => {
     checkServer();
     startScheduler();
   }, [checkServer]);
-
   // الاستماع لتغييرات الإعدادات (بعد ConnectScreen)
   useEffect(() => {
     const handleConfigChange = () => {
@@ -109,66 +93,68 @@ const AppRoutes = () => {
     window.addEventListener("tms-config-changed", handleConfigChange);
     return () => window.removeEventListener("tms-config-changed", handleConfigChange);
   }, [checkServer]);
-
-  if (loading) return <div className="h-screen w-full flex items-center justify-center"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>;
-
+  if (loading) return <PageLoader />;
   // ✅ إظهار ConnectScreen على الهاتف إذا الخادم غير متاح
-  if (serverOk === false && !window.location.pathname.startsWith("/survey") && !window.location.hash.startsWith("#/survey")) {
+  const onSurvey =
+    window.location.pathname.startsWith("/survey") ||
+    window.location.hash.startsWith("#/survey");
+  if (!onSurvey && serverOk === false) {
     const host = window.location.hostname;
-    const isHostedApp = /lovable\.(app|dev)$|lovableproject\.com$|vercel\.app$|netlify\.app$/i.test(host);
+    const isHostedApp =
+      /lovable\.(app|dev)$|lovableproject\.com$|vercel\.app$|netlify\.app$/i.test(host);
     const isMobile = isCapacitorNative() || isMobileDevice();
     if (isMobile && !isHostedApp) {
-      return <ConnectScreen onConnect={() => checkServer()} />;
+      return <ConnectScreen onRetry={checkServer} />;
     }
   }
-
   if (!user) {
     return (
-      <Routes>
-        <Route path="/survey/:courseId/:role" element={<Suspense fallback={<PageLoader />}><ExternalSurvey /></Suspense>} />
-        <Route path="/login" element={<Login />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/survey" element={<ExternalSurvey />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </Suspense>
     );
   }
-
   return (
-    <Routes>
-      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route index element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
-        <Route path="settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
-        <Route path="curriculum" element={<PermissionRoute permission={has("view_curriculum")}><Suspense fallback={<PageLoader />}><Curriculum /></Suspense></PermissionRoute>} />
-        <Route path="activity-log" element={<PermissionRoute permission={has("view_activity_log")}><Suspense fallback={<PageLoader />}><ActivityLog /></Suspense></PermissionRoute>} />
-        <Route path="tasks" element={<PermissionRoute permission={has("view_tasks")}><Suspense fallback={<PageLoader />}><Tasks /></Suspense></PermissionRoute>} />
-        <Route path="hr" element={<PermissionRoute permission={has("view_hr")}><Suspense fallback={<PageLoader />}><HRAttendance /></Suspense></PermissionRoute>} />
-        <Route path="courses" element={<PermissionRoute permission={has("view_courses")}><Suspense fallback={<PageLoader />}><Courses /></Suspense></PermissionRoute>} />
-        <Route path="training-plan" element={<PermissionRoute permission={has("view_training_plan")}><Suspense fallback={<PageLoader />}><TrainingPlan /></Suspense></PermissionRoute>} />
-        <Route path="archive" element={<PermissionRoute permission={has("view_archive")}><Suspense fallback={<PageLoader />}><Archive /></Suspense></PermissionRoute>} />
-        <Route path="evaluation" element={<PermissionRoute permission={has("view_evaluation")}><Suspense fallback={<PageLoader />}><Evaluation /></Suspense></PermissionRoute>} />
-        <Route path="reports" element={<PermissionRoute permission={has("view_reports")}><Suspense fallback={<PageLoader />}><Reports /></Suspense></PermissionRoute>} />
-      </Route>
-      <Route path="/survey/:courseId/:role" element={<Suspense fallback={<PageLoader />}><ExternalSurvey /></Suspense>} />
-      <Route path="/login" element={<Navigate to="/" replace />} />
-      <Route path="*" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />
-    </Routes>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route element={<Layout />}>
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/hr-attendance" element={<ProtectedRoute requireRole={has("hr_attendance")}><HRAttendance /></ProtectedRoute>} />
+          <Route path="/courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
+          <Route path="/curriculum" element={<ProtectedRoute><Curriculum /></ProtectedRoute>} />
+          <Route path="/evaluation" element={<ProtectedRoute><Evaluation /></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+          <Route path="/training-plan" element={<ProtectedRoute><TrainingPlan /></ProtectedRoute>} />
+          <Route path="/activity-log" element={<ProtectedRoute><ActivityLog /></ProtectedRoute>} />
+          <Route path="/archive" element={<ProtectedRoute><Archive /></ProtectedRoute>} />
+          <Route path="/survey" element={<ExternalSurvey />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 };
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AuthProvider>
-        <UIThemeProvider>
+    <UIThemeProvider>
+      <TooltipProvider>
+        <AuthProvider>
           <Router {...routerProps}>
-            <AppRoutes />
             <ErrorMonitor />
+            <Sonner />
+            <Toaster />
+            <AppRoutes />
           </Router>
-        </UIThemeProvider>
-      </AuthProvider>
-    </TooltipProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </UIThemeProvider>
   </QueryClientProvider>
 );
-
 export default App;
