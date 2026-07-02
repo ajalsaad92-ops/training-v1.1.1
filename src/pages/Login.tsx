@@ -1,16 +1,12 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { defaultUserAccounts } from "@/lib/localStore";
-import { Shield, LogIn, Eye, EyeOff, UserPlus, Loader2, Server, HardDrive, Radio } from "lucide-react";
+import { Shield, LogIn, Eye, EyeOff, UserPlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import ConnectionSetup from "@/components/ConnectionSetup";
-import { getConfig } from "@/lib/appConfig";
-import { prepareLoginConnection, startCentralServer } from "@/lib/connection";
-import { toast } from "@/hooks/use-toast";
+import { prepareLoginConnection } from "@/lib/connection";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -21,13 +17,6 @@ const Login = () => {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [connectStage, setConnectStage] = useState("");
-
-  // Server-setup dialog (shown when this desktop device must start the central server).
-  const [serverSetupOpen, setServerSetupOpen] = useState(false);
-  const [setupPort, setSetupPort] = useState(() => getConfig().localServer.port || 3000);
-  const [setupPath, setSetupPath] = useState(() => getConfig().storagePath || "");
-  const [startingServer, setStartingServer] = useState(false);
-  const pendingAuthRef = useRef<null | (() => Promise<void>)>(null);
 
   const { login, signup, user, loading } = useAuth();
   const navigate = useNavigate();
@@ -53,14 +42,6 @@ const Login = () => {
     setConnectStage("جارٍ التحقق من الخادم...");
     try {
       const status = await prepareLoginConnection();
-      if (status === "need-server") {
-        // Desktop with no running server → open the server setup wizard.
-        setConnectStage("");
-        setSubmitting(false);
-        pendingAuthRef.current = () => doAuth(authFn);
-        setServerSetupOpen(true);
-        return;
-      }
       if (status === "no-server") {
         setConnectStage("");
         setSubmitting(false);
@@ -86,20 +67,6 @@ const Login = () => {
     await withConnection(() => login(qEmail, qPassword));
   };
 
-  const confirmStartServer = async () => {
-    setStartingServer(true);
-    const ok = await startCentralServer({ port: setupPort, storagePath: setupPath });
-    setStartingServer(false);
-    if (!ok) {
-      toast({ title: "تعذّر تشغيل الخادم", description: "تأكد من تشغيل نسخة سطح المكتب", variant: "destructive" });
-      return;
-    }
-    toast({ title: "تم تشغيل الخادم المحلي", description: "سيتم تسجيل الدخول الآن" });
-    setServerSetupOpen(false);
-    const run = pendingAuthRef.current;
-    if (run) await run();
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/90 via-primary to-primary/80 p-4">
       <div className="w-full max-w-lg">
@@ -111,7 +78,7 @@ const Login = () => {
           <p className="text-primary-foreground/70 text-sm mt-2">مركز القيادة والتحكم</p>
         </div>
 
-        {/* Connection / server setup — sits ABOVE the login form */}
+        {/* Connection panel — sits ABOVE the login form */}
         <ConnectionSetup />
 
         <div className="bg-card rounded-2xl shadow-2xl p-8 border border-border">
@@ -190,34 +157,6 @@ const Login = () => {
           </div>
         )}
       </div>
-
-      {/* ===== Server setup dialog (desktop, when no server is running) ===== */}
-      <Dialog open={serverSetupOpen} onOpenChange={setServerSetupOpen}>
-        <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader className="text-right">
-            <DialogTitle className="flex items-center gap-2"><Server className="w-5 h-5 text-primary" />تشغيل الخادم المحلي</DialogTitle>
-            <DialogDescription>لم يُعثر على خادم مفتوح. اضبط الخادم المركزي لهذا الجهاز ثم ابدأ التشغيل لتسجيل الدخول.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label className="text-[11px] flex items-center gap-1.5"><HardDrive className="w-3.5 h-3.5" />مكان حفظ البيانات</Label>
-              <Input dir="ltr" value={setupPath} placeholder="C:\\TMS\\data" onChange={(e) => setSetupPath(e.target.value)} className="h-9 text-sm" />
-              <p className="text-[10px] text-muted-foreground">يُحفظ ولا حاجة لإدخاله في كل مرة.</p>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[11px]">منفذ البث (Port)</Label>
-              <Input dir="ltr" type="number" value={setupPort} onChange={(e) => setSetupPort(Number(e.target.value) || 3000)} className="h-9 text-sm" />
-              <p className="text-[10px] text-muted-foreground">سيبثّ الخادم على عناوين الشبكة المحلية لهذا الجهاز وفق هذا المنفذ.</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setServerSetupOpen(false)}>إلغاء</Button>
-            <Button className="gap-1.5" onClick={confirmStartServer} disabled={startingServer}>
-              {startingServer ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radio className="w-4 h-4" />}بدء الخادم وتسجيل الدخول
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
