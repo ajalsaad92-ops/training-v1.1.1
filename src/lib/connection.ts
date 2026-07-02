@@ -31,7 +31,6 @@ export function canHostServer(): boolean {
 export type LoginConnectionStatus =
   | "connected"    // a local server is reachable; ready to sign in
   | "is-server"    // this device IS the central server; ready to sign in
-  | "need-server"  // desktop with no server yet -> prompt to start it
   | "no-server"    // client (phone/other) found no server -> search/connect manually
   | "cloud";       // cloud mode -> sign in normally
 
@@ -76,19 +75,4 @@ export async function prepareLoginConnection(): Promise<LoginConnectionStatus> {
   // No server reachable: switch this device into local-client so the connection panel shows.
   setConfig({ mode: "local", serverRole: "client" });
   return "no-server";
-}
-
-/** Start the central server on this (desktop) device using the chosen storage path + port. */
-export async function startCentralServer(opts: { port: number; storagePath: string }): Promise<boolean> {
-  setConfig({
-    mode: "local",
-    serverRole: "server",
-    storagePath: opts.storagePath,
-    localServer: { ...getConfig().localServer, port: opts.port },
-  });
-  reinitSync();
-  // The desktop main process already serves the API. Try to confirm, but on the
-  // desktop app treat the server as running even if the ping is slow/blocked.
-  const ok = await pingLocalServer();
-  return ok || isElectronRuntime();
 }
